@@ -87,7 +87,6 @@ python manage.py runserver
 
 # Terminal 2: Frontend (React)
 $env:Path += ";C:\Program Files\nodejs"
-cd frontend
 npm install
 npm run dev
 ```
