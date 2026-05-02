@@ -337,6 +337,11 @@ class HOSCalculator:
             # Totals
             totals = {"off_duty": 0, "sleeper_berth": 0, "driving": 0, "on_duty_not_driving": 0}
             
+            # Sum up actual hours from day segments
+            for ds in day_segments:
+                if ds['status'] in totals:
+                    totals[ds['status']] += ds['duration_hrs']
+            
             # Normalize sum to 24.0 due to rounding
             total_sum = sum(totals.values())
             if abs(total_sum - 24.0) > 0.01:
