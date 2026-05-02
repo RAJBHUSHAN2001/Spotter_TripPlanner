@@ -1,0 +1,14 @@
+{
+  "name": "eld-trip-planner",
+  "version": "1.0.0",
+  "description": "ELD Trip Planner Root",
+  "scripts": {
+    "install-all": "npm install && cd frontend && npm install",
+    "dev-backend": "cd backend && .\\venv\\Scripts\\python.exe manage.py runserver",
+    "dev-frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
