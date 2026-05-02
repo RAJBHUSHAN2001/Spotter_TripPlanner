@@ -45,7 +45,7 @@
 ## 📂 Project Structure
 
 ```text
-eld-trip-planner/
+Spotter/
 ├── backend/                # Django REST API & HOS Logic
 │   ├── trip_planner/       # Core Application Logic
 │   │   ├── hos_calculator.py  # Automated Compliance Engine
@@ -105,7 +105,40 @@ npm run dev
 
 ---
 
-## 🛠️ Extensive Feature Breakdown
+## � Vercel Deployment
+
+### **Method 1: Vercel CLI (Recommended)**
+```powershell
+# 1. Install Vercel CLI
+npm i -g vercel
+
+# 2. Login to Vercel
+vercel login
+
+# 3. Deploy from project root
+vercel
+
+# 4. Follow the prompts to connect your GitHub repo
+```
+
+### **Method 2: GitHub Integration**
+1. Push your code to GitHub (already done!)
+2. Go to [vercel.com](https://vercel.com)
+3. Click "New Project"
+4. Import your GitHub repository: `RAJBHUSHAN2001/Spotter_TripPlanner`
+5. Vercel will auto-detect the framework and deploy
+
+### **Environment Variables Needed**
+In your Vercel dashboard, add these environment variables:
+- `ORS_API_KEY` - Your OpenRouteService API key (optional, for routing)
+
+### **Deployment URLs**
+- **Frontend**: Automatically assigned (e.g., `spotter-eld.vercel.app`)
+- **Backend API**: `https://your-app.vercel.app/api/trip-planner/`
+
+---
+
+## �🛠️ Extensive Feature Breakdown
 
 ### 🛰️ Tactical Mission Interface
 - **Geographic Vectors**: Precise input handling for Origin, Pickup, and Dropoff using human-readable names or raw coordinates.
