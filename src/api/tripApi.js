@@ -17,6 +17,7 @@ export const reverseGeocode = async (lat, lng) => {
     return response.data.address;
   } catch (error) {
     console.error('Reverse Geocode Error:', error);
-    return null;
+    // Fallback: return formatted coordinates when API fails
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   }
 };
