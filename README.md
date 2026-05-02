@@ -65,6 +65,7 @@ eld-trip-planner/
 
 The project is structured as a monorepo for seamless development. 
 
+### Option 1: Automated Launch (Recommended)
 ```powershell
 # 1. Environment Setup (if node is not in path)
 $env:Path += ";C:\Program Files\nodejs"
@@ -77,8 +78,31 @@ cd frontend; npm install; cd ..
 npm run dev
 ```
 
+### Option 2: Manual Terminal Setup
+```powershell
+# Terminal 1: Backend (Django)
+cd backend
+pip install -r requirements.txt
+python manage.py runserver
+
+# Terminal 2: Frontend (React)
+$env:Path += ";C:\Program Files\nodejs"
+cd frontend
+npm install
+npm run dev
+```
+
+### Option 3: PowerShell Script
+```powershell
+# Run the provided PowerShell script (use .\ prefix for PowerShell)
+.\run_all.ps1
+```
+
 > [!NOTE]
-> The `npm run dev` command uses `concurrently` to launch the Django server and the Vite/React dev server simultaneously. Access the tactical interface at `http://localhost:5173/`.
+> - **Backend runs on**: http://127.0.0.1:8000/
+> - **Frontend runs on**: http://localhost:5173/
+> - Access the tactical interface at http://localhost:5173/
+> - The backend API is available at http://127.0.0.1:8000/api/trip-planner/
 
 ---
 
