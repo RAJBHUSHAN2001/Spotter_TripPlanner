@@ -40,8 +40,22 @@ class PlanTripView(APIView):
         polyline1, dist1, dur1 = get_route_geometry([current_coords, pickup_coords])
         polyline2, dist2, dur2 = get_route_geometry([pickup_coords, dropoff_coords])
 
+        # Debug: Print values to see what's happening
+        print(f"DEBUG: Route 1 - dist1: {dist1}, dur1: {dur1}")
+        print(f"DEBUG: Route 2 - dist2: {dist2}, dur2: {dur2}")
+
         if polyline1 is None or polyline2 is None:
-            return Response({"error": "Could not calculate route."}, status=500)
+            # Fallback: Use direct haversine distance if routing fails
+            from .utils import haversine_miles
+            dist1 = haversine_miles(current_coords[0], current_coords[1], pickup_coords[0], pickup_coords[1])
+            dist2 = haversine_miles(pickup_coords[0], pickup_coords[1], dropoff_coords[0], dropoff_coords[1])
+            # Estimate duration: 60 mph average speed
+            dur1 = (dist1 / 60) * 3600  # seconds
+            dur2 = (dist2 / 60) * 3600  # seconds
+            # Create simple polylines
+            polyline1 = [current_coords, pickup_coords]
+            polyline2 = [pickup_coords, dropoff_coords]
+            print(f"DEBUG: Using fallback distances - dist1: {dist1}, dist2: {dist2}")
 
         # Accuracy Patch: Ensure stop names are human-readable for official DOT remarks
         def get_readable_name(loc_str, coords):
