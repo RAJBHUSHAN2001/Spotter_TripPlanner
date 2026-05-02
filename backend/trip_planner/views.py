@@ -1,9 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import csrf_exempt
+from django.views.decorators import csrf_protect
+from django.http import JsonResponse
 from .hos_calculator import HOSCalculator
 from .utils import geocode, snap_to_road, get_route_geometry, get_point_at_distance, reverse_geocode
 from .constants import MAX_CYCLE_HOURS
 
+@csrf_exempt
 class PlanTripView(APIView):
     def post(self, request):
         current_loc_str = request.data.get('current_location') or request.data.get('currentLocation')
@@ -122,6 +126,7 @@ class PlanTripView(APIView):
             }
         })
 
+@csrf_exempt
 class ReverseGeocodeView(APIView):
     def get(self, request):
         lat = request.query_params.get('lat')
