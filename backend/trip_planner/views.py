@@ -6,6 +6,53 @@ from .constants import MAX_CYCLE_HOURS
 
 class PlanTripView(APIView):
     def post(self, request):
+        # TEMPORARY: Return mock data to test frontend connection
+        return Response({
+            "route": {
+                "total_miles": 150.5,
+                "total_drive_time_hrs": 2.5,
+                "polyline": [
+                    [40.7128, -74.0060],  # NYC
+                    [41.8781, -87.6298],  # Chicago
+                    [39.7392, -104.9903]  # Denver
+                ],
+                "stops": [
+                    {"name": "New York, NY", "type": "start", "lat": 40.7128, "lng": -74.0060},
+                    {"name": "Chicago, IL", "type": "pickup", "lat": 41.8781, "lng": -87.6298, "distance_from_prev": 790.0, "duration_from_prev": 7200},
+                    {"name": "Denver, CO", "type": "dropoff", "lat": 39.7392, "lng": -104.9903, "distance_from_prev": 920.0, "duration_from_prev": 8400},
+                ]
+            },
+            "daily_logs": [
+                {
+                    "date": "2024-01-15",
+                    "driving_hours": 8.0,
+                    "on_duty_hours": 10.0,
+                    "off_duty_hours": 14.0,
+                    "sleeper_berth_hours": 0.0,
+                    "stops": [
+                        {"time": "06:00", "location": "New York, NY", "type": "start"},
+                        {"time": "14:00", "location": "Chicago, IL", "type": "pickup"},
+                        {"time": "16:30", "location": "Rest Stop", "type": "rest"},
+                        {"time": "20:00", "location": "Denver, CO", "type": "dropoff"}
+                    ]
+                }
+            ],
+            "meta": {
+                "driver_name": request.data.get('driverName', 'Test Driver'),
+                "co_driver_name": request.data.get('coDriverName', ''),
+                "vehicle_id": request.data.get('vehicleId', 'TRUCK001'),
+                "trailer_id": request.data.get('trailerId', 'TRL001'),
+                "license_plate": request.data.get('licensePlate', 'ABC123'),
+                "license_state": request.data.get('licenseState', 'NY'),
+                "carrier": request.data.get('carrierName', 'Test Carrier'),
+                "office_address": request.data.get('officeAddress', '123 Main St, New York, NY'),
+                "home_terminal": request.data.get('homeTerminal', 'New York, NY'),
+                "manifest_no": request.data.get('manifestNo', '123456')
+            }
+        })
+
+        # ORIGINAL CODE (commented out for now):
+        """
         current_loc_str = request.data.get('current_location') or request.data.get('currentLocation')
         pickup_loc_str = request.data.get('pickup_location') or request.data.get('pickupLocation')
         dropoff_loc_str = request.data.get('dropoff_location') or request.data.get('dropoffLocation')
@@ -56,6 +103,7 @@ class PlanTripView(APIView):
             polyline1 = [current_coords, pickup_coords]
             polyline2 = [pickup_coords, dropoff_coords]
             print(f"DEBUG: Using fallback distances - dist1: {dist1}, dist2: {dist2}")
+        """
 
         # Accuracy Patch: Ensure stop names are human-readable for official DOT remarks
         def get_readable_name(loc_str, coords):
