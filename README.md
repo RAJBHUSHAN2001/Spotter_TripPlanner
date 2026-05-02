@@ -46,24 +46,24 @@
 
 ```text
 Spotter/
+├── src/                    # React 18 Application (Frontend)
+│   ├── components/         # UI Components (DailyLog, MapView, HUD)
+│   ├── api/                # Tactical Downlink (API Client)
+│   └── App.jsx             # Mission Control Entry Point
 ├── backend/                # Django REST API & HOS Logic
 │   ├── trip_planner/       # Core Application Logic
 │   │   ├── hos_calculator.py  # Automated Compliance Engine
 │   │   └── views.py        # API Entry Points
 │   └── manage.py
-├── frontend/               # React 18 Application
-│   ├── src/
-│   │   ├── components/     # UI Components (DailyLog, MapView, HUD)
-│   │   ├── api/            # Tactical Downlink (API Client)
-│   │   └── App.jsx         # Mission Control Entry Point
-│   └── vite.config.js
-├── vercel.json             # Vercel Deployment Configuration
+├── public/                 # Static Assets
+├── package.json            # Frontend Dependencies
+├── vite.config.js          # Vite Configuration
 └── README.md               # Tactical Documentation
 ```
 
-## ⚡ Quick Start (Monorepo)
+## ⚡ Quick Start
 
-The project is structured as a monorepo for seamless development. 
+The project is now structured with frontend at root for easy Vercel deployment. 
 
 ### Option 1: Automated Launch (Recommended)
 ```powershell
@@ -72,7 +72,6 @@ $env:Path += ";C:\Program Files\nodejs"
 
 # 2. Install all dependencies
 npm install
-cd frontend; npm install; cd ..
 
 # 3. Launch Mission Control (Starts both Backend & Frontend)
 npm run dev
