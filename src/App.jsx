@@ -47,12 +47,17 @@ function App() {
     }, 600);
 
     const submissionData = { ...formData };
-    Object.keys(draftMarkers).forEach(field => {
+    for (const field of Object.keys(draftMarkers)) {
       const pos = draftMarkers[field];
       if (pos && pos.lat && pos.lng) {
-        submissionData[field] = `${pos.lat}, ${pos.lng}`;
+        try {
+          const address = await reverseGeocode(pos.lat, pos.lng);
+          submissionData[field] = address || `${pos.lat}, ${pos.lng}`;
+        } catch (error) {
+          submissionData[field] = `${pos.lat}, ${pos.lng}`;
+        }
       }
-    });
+    }
 
     try {
       const data = await planTrip(submissionData);
