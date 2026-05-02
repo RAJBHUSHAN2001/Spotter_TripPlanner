@@ -1,4 +1,4 @@
-# 🛰️ SPOTTER ELD: Mission Control v2.5
+# 🛰️ SPOTTER ELD: Mission Control v2.5.1
 
 **Spotter ELD Mission Control** is a professional-grade, DOT-audit-ready mission planning and Hours of Service (HOS) visualization system. Engineered for property-carrying drivers, it transforms complex logistical routes into high-fidelity, compliant records of duty status.
 
@@ -138,7 +138,7 @@ In your Vercel dashboard, add these environment variables:
 
 ---
 
-## �🛠️ Extensive Feature Breakdown
+## ��️ Extensive Feature Breakdown
 
 ### 🛰️ Tactical Mission Interface
 - **Geographic Vectors**: Precise input handling for Origin, Pickup, and Dropoff using human-readable names or raw coordinates.
