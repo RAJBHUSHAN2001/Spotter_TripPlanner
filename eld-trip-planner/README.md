@@ -1,85 +1,122 @@
-# 🚛 SPOTTER ELD: The Professional HOS Compliance Command Center
+# 🛰️ SPOTTER ELD: Mission Control v2.5
 
-**SPOTTER ELD** is a high-precision, industrial-grade routing and compliance engine designed for the modern long-haul trucking industry. It transforms the complexities of US Federal Motor Carrier Safety Administration (FMCSA) regulations into a streamlined, automated, and visually stunning logistics experience. 
+**Spotter ELD Mission Control** is a professional-grade, DOT-audit-ready mission planning and Hours of Service (HOS) visualization system. Engineered for property-carrying drivers, it transforms complex logistical routes into high-fidelity, compliant records of duty status.
 
-Built with a robust **Django** backend and a cutting-edge **React 19** frontend, SPOTTER ELD ensures drivers stay compliant, safe, and efficient on every mile of the road.
-
----
-
-## 👨‍💻 Developed By
-**Raj Bhushan**
-
-> **Developer's Note:** Engineering a system that perfectly synchronizes real-time spatial routing with the rigid, minute-by-minute state machine of HOS (Hours of Service) regulations was a formidable challenge. From interpolating GPS coordinates along a 2,000-mile route to pixel-perfect SVG grid rendering for DOT-compliant logs, every line of code was written to ensure zero-margin-for-error accuracy. 
+![Mission Control HUD](https://img.shields.io/badge/Status-Audit_Ready-emerald?style=for-the-badge)
+![Tech Stack](https://img.shields.io/badge/Stack-Django_|_React-blue?style=for-the-badge)
+![Compliance](https://img.shields.io/badge/Compliance-FMCSA_§_395.8-navy?style=for-the-badge)
 
 ---
 
-## 🌟 In-Depth Feature Catalog
+## 🚀 Key Features
 
-### 1. The HOS Simulation "Brain"
-The core engine is a deterministic state machine that simulates a driver's journey second-by-second.
-- **🕒 Clock Hardening:** Strictly enforces the **11-Hour Driving Limit**, **14-Hour On-Duty Window**, and **70-Hour/8-Day Cycle**.
-- **🛑 Smart Interruption Engine:** Automatically injects mandatory **30-minute breaks** after 8 cumulative hours of driving and **10-hour rest resets** when shift limits are reached.
-- **⛽ Logistical Automation:** Intelligently schedules fueling stops every **1,000 miles**, factoring in the 30-minute on-duty time penalty for each stop.
-- **📦 Hub Operations:** Automatically accounts for **1-hour loading/unloading** on-duty times at both pickup and drop-off points.
+### 1. Tactical Mission Planning
+- **Precision Geocoding**: High-accuracy vector calculation for Origin, Pickup, and Dropoff points.
+- **Interactive Map Visualizer**: Automated `fitBounds` routing with animated tactical polylines and interactive stop cards.
+- **Multi-Step Initialization**: A sophisticated loading sequence that simulates geocoding, routing, and HOS application.
 
-### 2. Tactical Mission Control (UI/UX)
-Designed for high-stakes enterprise logistics with a focus on "Glassmorphism 2.0" aesthetics.
-- **🛰️ Mission Control Layout:** A full-screen, fixed-height "Command Center" that maximizes information density without sacrificing clarity.
-- **🌓 Dynamic Dark Mode:** A deep slate and blue aesthetic optimized for night-shift operations to reduce driver eye strain.
-- **🛡️ Compliance Metadata Panel:** A dedicated section to capture 100% of DOT-mandated info: **Driver Name, Vehicle ID, Trailer ID, License Plate, and Carrier HQ**.
-- **🕹️ Tactical Navigation:** Interactive map-click assignment for Origin, Hub Intercept, and Target Destination.
+### 2. Automated HOS Engine (§ 395.3)
+- **Shift Enforcement**: Automatic monitoring of 11-hour driving limits and 14-hour duty windows.
+- **Smart Rests**: Proactive insertion of 10-hour rest periods and 34-hour restarts to maintain 100% compliance.
+- **8-Hour Break Integration**: Automated 30-minute break scheduling before the 8th hour of driving.
+- **Logistics Constraints**: Enforces fueling every 1,000 miles and 1-hour cargo handling activities.
 
-### 3. Authentic DOT Daily Logs (Form 395.8)
-Transform digital simulation data into official US DOT Driver's Daily Logs.
-- **📏 High-Density SVG Grid:** A pixel-perfect recreation of the official paper log, featuring 15-minute sub-ticks and 24:00 terminal hour logic.
-- **📈 Status Graphing:** Real-time rendering of the duty-status line that "steps" across Off Duty, Sleeper, Driving, and On Duty rows.
-- **✍️ Digital Certification:** Automatically populates carrier details and generates a digital signature block for the primary driver.
+### 3. Mission Control HUD
+- **Unified Stats Bar**: Real-time tracking of Total Distance, ETA, Active Drive Time, and Compliance Status.
+- **Tactical Aesthetic**: High-contrast, monochromatic dark mode (`#0f1117`) optimized for low-light cockpit operation.
+- **Operational History**: Persistent localStorage tracking of recent mission vectors.
 
-### 4. Spatial Intelligence
-- **📍 Linear Path Interpolation:** Uses advanced geometry to find the exact GPS coordinate at any mile-marker where an HOS event (rest, fuel, break) must occur.
-- **🌍 Reverse Geocode Enrichment:** Every stop is automatically queried against the Nominatim API to provide city and state names (e.g., *"Rest near Springfield, MO"*).
-- **🖱️ Map-to-Form Integration:** Map clicks instantly resolve into human-readable addresses in the input fields.
+### 4. Audit-Ready Daily Logs
+- **Dynamic Grid Rendering**: High-density SVG grids with FMCSA-standard hour markers and status-colored timelines.
+- **Automated Remarks**: Intelligent timeline generation with deduplicated status updates and cleaned location names.
+- **Mission Debriefing**: A comprehensive summary grid of total performance metrics, optimized for professional PDF export.
 
 ---
 
-## ⚖️ The "Active Cycle" (HRS): Why it Matters
-The **Active Cycle** input is a critical component of DOT compliance. 
-*   **The Rule:** Drivers are limited to 70 hours of on-duty time in any rolling 8-day period.
-*   **The Logic:** SPOTTER ELD takes your "Hours already used" as an input. If you have used 60 hours already, the system knows you only have 10 hours of "work-budget" left before a mandatory daily rest or cycle reset is required.
-*   **The Result:** The engine intelligently forces rest segments earlier in the trip if the driver is "running out of cycle," ensuring no driver ever enters a violation state.
+## 🛠️ Tech Stack
+
+- **Backend**: Django 5.0, Django REST Framework, Python HOS Engine.
+- **Frontend**: React 18, Tailwind CSS, Framer Motion (Animations), Lucide (Icons).
+- **Mapping**: Leaflet.js, OpenStreetMap (OSRM), Nominatim Geocoding.
+- **Export**: Professional CSS Print Media queries for audit-compliant PDF generation.
 
 ---
 
-## 🏗️ Architectural Excellence
+## 📂 Project Structure
 
-1.  **The Spatial Interpolation Problem:** Solved with a custom **Linear Interpolation Algorithm** traversing route polylines to find exact HOS trigger coordinates.
-2.  **24-Hour Normalization:** A backend engine that slices continuous trip data into exact midnight-to-midnight periods for DOT-compliant daily logs.
-3.  **Stateless Session Integrity:** The workspace is designed to reset on reload, ensuring a clean "Blank Slate" for every new mission plan.
+```text
+eld-trip-planner/
+├── backend/                # Django REST API & HOS Logic
+│   ├── trip_planner/       # Core Application Logic
+│   │   ├── hos_calculator.py  # Automated Compliance Engine
+│   │   └── views.py        # API Entry Points
+│   └── manage.py
+├── frontend/               # React 18 Application
+│   ├── src/
+│   │   ├── components/     # UI Components (DailyLog, MapView, HUD)
+│   │   ├── api/            # Tactical Downlink (API Client)
+│   │   └── App.jsx         # Mission Control Entry Point
+│   └── vite.config.js
+├── vercel.json             # Vercel Deployment Configuration
+└── README.md               # Tactical Documentation
+```
 
----
+## ⚡ Quick Start (Monorepo)
 
-## 🚀 Technical Stack
+The project is structured as a monorepo for seamless development. 
 
-- **Backend:** Django 4.2, Django REST Framework, Geopy.
-- **Frontend:** React 19, Vite, Tailwind CSS, Framer Motion, Leaflet.js.
-- **APIs:** OSRM (Routing Engine), Nominatim (Reverse Geocoding), ORS (Geocoding).
-
----
-
-## 🛠️ Getting Started
-
-### 1. Prerequisites
-- **Python 3.10+**
-- **Node.js 20+**
-
-### 2. Quick Launch
-From the root of the workspace:
 ```powershell
-cd eld-trip-planner
-npm run install-all
+# 1. Environment Setup (if node is not in path)
+$env:Path += ";C:\Program Files\nodejs"
+
+# 2. Install all dependencies
+npm install
+cd frontend; npm install; cd ..
+
+# 3. Launch Mission Control (Starts both Backend & Frontend)
 npm run dev
 ```
 
+> [!NOTE]
+> The `npm run dev` command uses `concurrently` to launch the Django server and the Vite/React dev server simultaneously. Access the tactical interface at `http://localhost:5173/`.
+
 ---
 
-**SPOTTER ELD: Compliant. Efficient. Tactical. Ready for the Road.**
+## 🛠️ Extensive Feature Breakdown
+
+### 🛰️ Tactical Mission Interface
+- **Geographic Vectors**: Precise input handling for Origin, Pickup, and Dropoff using human-readable names or raw coordinates.
+- **Auto-Fit Navigation**: Map automatically bounds to show the entire route with 60px safety padding.
+- **Animated Polyline**: Visualizing the mission route with a high-fidelity dashed tactical line.
+- **Interactive HUD**: Bottom-docked status bar providing real-time telemetry:
+    - **Total Distance**: Aggregated mileage across the entire mission.
+    - **ETA**: Projected arrival time based on HOS-compliant scheduling.
+    - **Active Drive Time**: Total cumulative hours behind the wheel.
+    - **Compliance Status**: Authoritative DOT verification badge.
+
+### 🧠 Advanced HOS Compliance Engine (§ 395.3)
+The engine simulates a property-carrying driver's lifecycle with 100% adherence to FMCSA regulations:
+- **11-Hour Driving Limit**: Forces a 10-hour rest if driving exceeds 11 hours in a shift or calendar day.
+- **14-Hour Duty Window**: Monitors the clock from the first "On-Duty" event and prevents driving after 14 hours.
+- **8-Hour Rest Rule**: Automatically schedules a 30-minute break before the 8th consecutive hour of driving.
+- **70-Hour / 8-Day Rule**: Tracks cumulative cycle time and triggers a **34-hour restart** when limits are reached.
+- **Logistics Overlays**: 
+    - **Fueling**: Automatic stops every 1,000 miles.
+    - **Cargo Handling**: 1-hour "On-Duty Not Driving" segments for all pickups and dropoffs.
+    - **Pre-trip**: Mandatory inspection segment at mission start.
+
+### 📄 Audit-Ready Daily Logs
+- **Custom SVG Grid**: High-precision 24-hour grid with status-colored lines (Driving=Navy, On-Duty=Emerald, Off-Duty=Blue).
+- **Intelligent Remarks**: 
+    - Auto-geocoded location names (no raw coordinates in remarks).
+    - Deduplicated entries to prevent redundant status lines.
+    - Professional event formatting: `[HH:MM] Location - Status`.
+- **Mission Debriefing**: A 2-column performance summary optimized for PDF export, detailing total mission impact.
+
+---
+
+## 📜 Compliance Standards
+The Spotter ELD system is designed to adhere to **FMCSA 49 CFR § 395.8** regulations for Record of Duty Status (RODS). 
+
+---
+**Developed by Raj** • *Mission Control v2.5 Tactical*

@@ -1,0 +1,15 @@
+"""Shared constants for trip planning and HOS rules."""
+
+# HOS / duty limits
+MAX_CYCLE_HOURS = 70.0
+MAX_DRIVE_HOURS_PER_WINDOW = 11.0
+MAX_DRIVE_HOURS_BEFORE_BREAK = 8.0
+MAX_DUTY_WINDOW_HOURS = 14.0
+REST_RESET_HOURS = 10.0
+BREAK_HOURS = 0.5
+
+# Trip assumptions from assessment
+PICKUP_HOURS = 1.0
+DROPOFF_HOURS = 1.0
+PRETRIP_HOURS = 0.5
+FUEL_STOP_MILES = 1000.0

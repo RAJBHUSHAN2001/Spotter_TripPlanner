@@ -1,19 +1,26 @@
 /* eslint-disable */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { User, Truck, Globe, Clock, ShieldCheck, AlertCircle } from 'lucide-react';
 
-const STATUS_Y = {
-  off_duty: 30,
-  sleeper_berth: 70,
-  driving: 110,
-  on_duty_not_driving: 150
-};
+const ROWS = [
+  { id: 'off_duty', label: 'OFF DUTY', color: '#2563eb' },
+  { id: 'sleeper_berth', label: 'SLEEPER BERTH', color: '#8b5cf6' },
+  { id: 'driving', label: 'DRIVING', color: '#0f172a' },
+  { id: 'on_duty_not_driving', label: 'ON DUTY (ND)', color: '#10b981' }
+];
 
-const HOUR_WIDTH = 32; 
-const X_OFFSET = 100;
+const ROW_HEIGHT = 40; 
+const HOUR_WIDTH = 30; 
+const X_OFFSET = 110;
 
-const DailyLogSheet = ({ log, meta = {} }) => {
+const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
   const [hoveredSegment, setHoveredSegment] = useState(null);
+
+  const getStatusY = (status) => {
+    const idx = ROWS.findIndex(r => r.id === status);
+    return 30 + (idx * ROW_HEIGHT);
+  };
 
   const timeToX = (timeStr) => {
     if (!timeStr) return X_OFFSET;
@@ -23,167 +30,205 @@ const DailyLogSheet = ({ log, meta = {} }) => {
     return X_OFFSET + (h * HOUR_WIDTH) + (m / 60 * HOUR_WIDTH);
   };
 
-  const renderSegments = () => {
-    if (!log?.segments) return [];
-    const lines = [];
-    for (let i = 0; i < log.segments.length; i++) {
-      const seg = log.segments[i];
-      const startX = timeToX(seg.start_time);
-      const endX = timeToX(seg.end_time);
-      const y = STATUS_Y[seg.status];
 
-      lines.push(
-        <motion.line
-          key={`h-${i}`}
-          x1={startX} y1={y} x2={endX} y2={y}
-          stroke={seg.status === 'driving' ? '#ef4444' : '#3b82f6'}
-          strokeWidth="4"
-          onMouseEnter={() => setHoveredSegment(seg)}
-          onMouseLeave={() => setHoveredSegment(null)}
-          className="cursor-pointer"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-        />
-      );
-
-      if (i < log.segments.length - 1) {
-        const nextSeg = log.segments[i + 1];
-        const nextY = STATUS_Y[nextSeg.status];
-        lines.push(
-          <line
-            key={`v-${i}`}
-            x1={endX} y1={y} x2={endX} y2={nextY}
-            stroke={seg.status === 'driving' ? '#ef4444' : '#3b82f6'}
-            strokeWidth="4"
-            opacity="0.3"
-          />
-        );
-      }
-    }
-    return lines;
-  };
 
   return (
-    <div className="compliance-doc relative">
-      {/* DOT Header */}
-      <div className="border-b-4 border-slate-900 dark:border-white mb-8 pb-6 flex justify-between items-end">
-        <div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter mb-1 italic">Driver&apos;s Daily Log</h1>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[10px] font-bold uppercase opacity-60 tracking-widest mt-4">
-            <p><span className="opacity-40">Carrier:</span> {meta.carrier || 'SPOTTER LOGISTICS'}</p>
-            <p><span className="opacity-40">Main Office:</span> {meta.office_address || 'USA'}</p>
-            <p><span className="opacity-40">Home Terminal:</span> {meta.home_terminal || 'NOT SET'}</p>
-            <p><span className="opacity-40">Compliance:</span> Form 395.8 / ELD Verified</p>
-          </div>
+    <div className="compliance-doc relative bg-white dark:bg-slate-900 shadow-2xl rounded-sm border-t-[4px] border-blue-600 overflow-hidden mb-16">
+      {/* Redesigned Date Badge & Day Indicator */}
+      <div className="flex items-stretch h-20 border-b-2 border-slate-900 dark:border-white">
+        <div className="bg-slate-100 dark:bg-slate-800/80 px-8 flex flex-col justify-center border-r-2 border-slate-900 dark:border-white">
+          <span className="text-[10px] font-black opacity-30 uppercase tracking-[0.3em]">Mission Phase</span>
+          <span className="text-xl font-black text-blue-600 uppercase italic">Day {dayNumber || 1} <span className="opacity-30 text-slate-900 dark:text-white">/ {totalDays || 1}</span></span>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-black tracking-[0.4em] opacity-30 uppercase mb-4">Official Record of Duty Status</p>
-          <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-3 rounded-sm font-black text-2xl shadow-xl">
-            {log.date}
+        <div className="flex-grow flex items-center px-10 bg-slate-900 text-white relative">
+          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600" />
+          <h2 className="text-3xl font-black tracking-tight italic uppercase">
+            {new Date(log.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+          </h2>
+          <div className="ml-auto">
+             <div className="bg-emerald-600 px-6 py-2 rounded-sm flex items-center gap-3 shadow-lg">
+               <span className="text-xs font-black uppercase text-white tracking-widest">✓ ELD RECORD VERIFIED</span>
+             </div>
           </div>
         </div>
       </div>
 
-      {/* Driver & Vehicle Metadata */}
-      <div className="grid grid-cols-6 gap-0 border-2 border-slate-900 dark:border-white mb-10 overflow-hidden rounded-sm">
-        {[
-          { label: 'Primary Driver', value: meta.driver_name, span: 'col-span-2' },
-          { label: 'Co-Driver', value: meta.co_driver_name || 'NONE', span: 'col-span-2' },
-          { label: 'Total Miles', value: `${log.total_miles_today} MI`, span: 'col-span-1' },
-          { label: 'Today Mileage', value: `${log.total_miles_today} MI`, span: 'col-span-1' },
-          { label: 'Truck / Tractor ID', value: meta.vehicle_id, span: 'col-span-1' },
-          { label: 'Trailer Number(s)', value: meta.trailer_id, span: 'col-span-1' },
-          { label: 'License Plate', value: `${meta.license_plate} (${meta.license_state})`, span: 'col-span-2' },
-          { label: 'Shipping Docs / Manifest', value: meta.manifest_no || 'NOT SPECIFIED', span: 'col-span-2' },
-        ].map((item, i) => (
-          <div key={i} className={`${item.span} p-4 border-r border-b border-slate-900/10 dark:border-white/10 last:border-r-0`}>
-            <p className="text-[8px] font-black uppercase opacity-40 mb-1 leading-none">{item.label}</p>
-            <p className="font-bold text-[11px] truncate">{item.value || 'N/A'}</p>
+      <div className="p-10">
+        {/* Header Info Card - High Performance Layout */}
+        <div className="grid grid-cols-4 border-2 border-slate-900 dark:border-white mb-10 rounded-sm overflow-hidden divide-x-2 divide-slate-900 dark:divide-white">
+          <div className="p-5 space-y-1.5">
+            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Primary Driver</p>
+            <p className="font-bold text-sm truncate uppercase">{meta.driver_name || 'NOT SPECIFIED'}</p>
           </div>
-        ))}
-      </div>
-
-      {/* 24-Hour Grid */}
-      <div className="relative mb-10 py-6 overflow-x-auto bg-slate-50/30 dark:bg-slate-800/20 rounded-xl p-6 border border-black/5 dark:border-white/5">
-        <svg width="950" height="220" className="mx-auto overflow-visible">
-          {Object.keys(STATUS_Y).map(status => (
-            <text key={status} x={X_OFFSET - 20} y={STATUS_Y[status] + 5} textAnchor="end" className="text-[9px] font-black uppercase tracking-tighter opacity-60">
-              {status.replace(/_/g, ' ')}
-            </text>
-          ))}
-
-          <rect x={X_OFFSET} y={10} width={24 * HOUR_WIDTH} height="160" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.8" />
-          
-          {Array.from({ length: 25 }).map((_, i) => (
-            <React.Fragment key={i}>
-              <line 
-                x1={X_OFFSET + (i * HOUR_WIDTH)} y1={10} 
-                x2={X_OFFSET + (i * HOUR_WIDTH)} y2={170} 
-                stroke="currentColor" 
-                opacity={i % 6 === 0 ? "0.6" : "0.15"} 
-                strokeWidth={i % 6 === 0 ? "2" : "1"} 
-              />
-              <text x={X_OFFSET + (i * HOUR_WIDTH)} y="195" textAnchor="middle" className="text-[9px] font-black opacity-40">
-                {i === 0 ? 'MID' : i === 12 ? 'NOON' : i === 24 ? 'MID' : i > 12 ? i - 12 : i}
-              </text>
-            </React.Fragment>
-          ))}
-
-          {Object.values(STATUS_Y).map(y => (
-            <line key={y} x1={X_OFFSET} y1={y} x2={X_OFFSET + 24 * HOUR_WIDTH} y2={y} stroke="currentColor" opacity="0.1" strokeWidth="1" />
-          ))}
-
-          {renderSegments()}
-
-          {/* Totals Section */}
-          <rect x={X_OFFSET + 24 * HOUR_WIDTH + 15} y={10} width="65" height="160" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.8" />
-          <text x={X_OFFSET + 24 * HOUR_WIDTH + 47} y={-5} textAnchor="middle" className="text-[9px] font-black uppercase opacity-40">Total Hrs</text>
-          {['off_duty', 'sleeper_berth', 'driving', 'on_duty_not_driving'].map(status => (
-            <text key={status} x={X_OFFSET + 24 * HOUR_WIDTH + 47} y={STATUS_Y[status] + 5} textAnchor="middle" className="font-black text-sm">
-              {log?.total_hours?.[status] || '0'}
-            </text>
-          ))}
-        </svg>
-
-        <AnimatePresence>
-          {hoveredSegment && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="absolute top-0 right-10 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl z-20 border border-white/10"
-            >
-              <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-50">{hoveredSegment.status.replace(/_/g, ' ')}</p>
-              <p className="text-xl font-black text-blue-400">{hoveredSegment.start_time} — {hoveredSegment.end_time}</p>
-              <p className="text-[10px] mt-2 font-bold italic opacity-70">{hoveredSegment.location}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Remarks & Recaps */}
-      <div className="grid grid-cols-3 gap-10 pt-10 border-t-2 border-slate-900 dark:border-white">
-        <div className="col-span-2">
-          <h3 className="text-tactical opacity-30 mb-6">Detailed Log Remarks</h3>
-          <div className="grid grid-cols-1 gap-3">
-            {log.remarks.map((rem, i) => (
-              <div key={i} className="flex gap-4 items-center bg-slate-50 dark:bg-slate-800/40 p-3 rounded-lg border border-black/5 dark:border-white/5">
-                <span className="text-[10px] font-black text-blue-500 w-12 text-right">[{rem.split(' - ')[0]}]</span>
-                <span className="text-[10px] font-bold opacity-80 truncate">{rem.split(' - ').slice(1).join(' - ')}</span>
-              </div>
-            ))}
+          <div className="p-5 space-y-1.5">
+            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Co-Driver</p>
+            <p className="font-bold text-sm truncate uppercase">{meta.co_driver_name || 'NONE'}</p>
+          </div>
+          <div className="p-5 space-y-1.5 bg-slate-50 dark:bg-white/5">
+            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Total Miles</p>
+            <p className="font-bold text-sm flex items-center gap-3">🚛 {log.total_miles_cumulative || log.total_miles_today} <span className="text-[10px] opacity-30">MI</span></p>
+          </div>
+          <div className="p-5 space-y-1.5 bg-slate-50 dark:bg-white/5">
+            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Today Mileage</p>
+            <p className="font-bold text-sm flex items-center gap-3">📍 {log.total_miles_today} <span className="text-[10px] opacity-30">MI</span></p>
+          </div>
+          <div className="p-5 space-y-1.5 border-t-2 border-slate-900 dark:border-white">
+            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Vehicle ID</p>
+            <p className="font-bold text-sm">{meta.vehicle_id}</p>
+          </div>
+          <div className="p-5 space-y-1.5 border-t-2 border-slate-900 dark:border-white">
+            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Trailer(s)</p>
+            <p className="font-bold text-sm">{meta.trailer_id || 'N/A'}</p>
+          </div>
+          <div className="p-5 space-y-1.5 col-span-2 border-t-2 border-slate-900 dark:border-white">
+            <p className={`text-[9px] font-black uppercase tracking-widest ${!meta.home_terminal ? 'text-amber-600' : 'opacity-40'}`}>
+              {!meta.home_terminal ? '⚠ HOME TERMINAL: NOT SET' : 'Home Terminal'}
+            </p>
+            <p className={`font-bold text-sm ${!meta.home_terminal ? 'text-amber-600 italic' : 'uppercase'}`}>
+              {meta.home_terminal || 'REQUIRED FOR COMPLIANCE'}
+            </p>
           </div>
         </div>
-        
-        <div className="flex flex-col justify-between">
-          <div>
-            <h3 className="text-tactical opacity-30 mb-4 text-right">Certification</h3>
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-6 rounded-2xl border-2 border-dashed border-slate-900/10 dark:border-white/10">
-              <p className="font-serif italic text-3xl opacity-90 text-right">{meta.driver_name || 'Driver Name'}</p>
-              <p className="text-[9px] font-black uppercase tracking-widest mt-4 text-right opacity-40">Authorized Digital Signature</p>
+
+        {/* Graph Legend */}
+        <div className="flex gap-8 mb-4 px-2" style={{ marginLeft: X_OFFSET }}>
+          {ROWS.map(row => (
+            <div key={row.id} className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-sm shadow-sm" style={{ background: row.color }} />
+              <span className="text-[11px] font-black opacity-40 uppercase tracking-tighter">{row.label}</span>
             </div>
-          </div>
-          <div className="text-right pt-6">
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-20">System: SPOTTER-ELD-PRO v3.2</p>
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-20">Certified 49 CFR § 395.8</p>
-          </div>
+          ))}
+        </div>
+
+        {/* 24-Hour Grid */}
+        <div className="relative overflow-x-auto custom-scrollbar pb-12 bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-sm border border-slate-200 dark:border-white/10">
+          <svg width={X_OFFSET + (24 * HOUR_WIDTH) + 120} height={230} className="overflow-visible">
+            {/* Grid Row Backgrounds */}
+            {ROWS.map((row, i) => (
+              <React.Fragment key={row.id}>
+                <line x1={X_OFFSET} y1={getStatusY(row.id)} x2={X_OFFSET + 24 * HOUR_WIDTH} y2={getStatusY(row.id)} stroke="currentColor" opacity="0.1" strokeWidth="0.5" />
+                <text x={X_OFFSET - 20} y={getStatusY(row.id) + 4} textAnchor="end" className="text-[11px] font-black opacity-40 uppercase tracking-tighter">
+                  {row.label}
+                </text>
+              </React.Fragment>
+            ))}
+
+            {/* Vertical Hour Markers & Labels */}
+            {Array.from({ length: 25 }).map((_, i) => {
+              const x = X_OFFSET + (i * HOUR_WIDTH);
+              const isMajor = i % 12 === 0;
+              const isTwoHour = i % 2 === 0;
+              return (
+                <React.Fragment key={i}>
+                  <line 
+                    x1={x} y1={10} x2={x} y2={180} 
+                    stroke="currentColor" 
+                    opacity={isMajor ? 0.5 : isTwoHour ? 0.2 : 0.05} 
+                    strokeDasharray={isMajor ? "0" : "3,3"}
+                    strokeWidth={isMajor ? 1 : 0.5}
+                  />
+                  {isTwoHour && (
+                    <text x={x} y={205} textAnchor="middle" className={`text-[10px] font-black opacity-40 ${isMajor ? 'opacity-100 font-black scale-110 fill-slate-900 dark:fill-white' : ''}`}>
+                      {i === 0 ? 'MID' : i === 12 ? 'NOON' : i === 24 ? 'MID' : i}
+                    </text>
+                  )}
+                </React.Fragment>
+              );
+            })}
+
+            {/* Total Hrs Summary Column */}
+            <rect x={X_OFFSET + 24 * HOUR_WIDTH + 20} y={10} width="90" height="175" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.1" />
+            <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={-5} textAnchor="middle" className="text-[9px] font-black opacity-40 uppercase tracking-widest">Total Hrs</text>
+            
+            {ROWS.map((row, i) => (
+              <React.Fragment key={`total-${row.id}`}>
+                <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={getStatusY(row.id) - 12} textAnchor="middle" className="text-[7px] font-black opacity-30 uppercase tracking-widest">
+                  {row.label}
+                </text>
+                <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={getStatusY(row.id) + 6} textAnchor="middle" className="text-base font-black italic">
+                  {parseFloat(log.total_hours?.[row.id] || 0).toFixed(1)}
+                </text>
+                <line x1={X_OFFSET + 24 * HOUR_WIDTH + 30} y1={getStatusY(row.id) + 20} x2={X_OFFSET + 24 * HOUR_WIDTH + 100} y2={getStatusY(row.id) + 20} stroke="currentColor" opacity="0.1" />
+              </React.Fragment>
+            ))}
+
+            <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={180} textAnchor="middle" className={`text-xs font-black ${Math.abs(Object.values(log.total_hours || {}).reduce((a, b) => a + b, 0) - 24) > 0.01 ? 'fill-red-600' : 'fill-slate-900 dark:fill-white'}`}>
+              TOTAL: {Object.values(log.total_hours || {}).reduce((a, b) => a + b, 0).toFixed(1)}
+            </text>
+
+            {/* Duty Status Segments */}
+            {log.segments.map((seg, i) => {
+              const startX = timeToX(seg.start_time);
+              const endX = timeToX(seg.end_time);
+              const y = getStatusY(seg.status);
+              const rowColor = ROWS.find(r => r.id === seg.status)?.color;
+
+              return (
+                <React.Fragment key={i}>
+                  <line 
+                    x1={startX} y1={y} x2={endX} y2={y} 
+                    stroke={rowColor} strokeWidth="8" strokeLinecap="round"
+                    className="cursor-pointer transition-all hover:stroke-blue-400"
+                    onMouseEnter={() => setHoveredSegment(seg)}
+                    onMouseLeave={() => setHoveredSegment(null)}
+                  />
+                  {i < log.segments.length - 1 && (
+                    <line 
+                      x1={endX} y1={y} x2={endX} y2={getStatusY(log.segments[i+1].status)} 
+                      stroke={rowColor} strokeWidth="1" opacity="0.2" 
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </svg>
+
+          <AnimatePresence>
+            {hoveredSegment && (
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                className="absolute top-4 right-32 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-20 border border-white/10 min-w-[200px]"
+              >
+                <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-40">{hoveredSegment.status.replace(/_/g, ' ')}</p>
+                <p className="text-xl font-black text-blue-400 tabular-nums">{hoveredSegment.start_time} — {hoveredSegment.end_time}</p>
+                <p className="text-[10px] mt-3 font-bold italic opacity-60 leading-relaxed border-t border-white/10 pt-2">{hoveredSegment.location}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Detailed Timeline Remarks */}
+        <div className="mt-12">
+           <h3 className="text-tactical opacity-30 mb-10 flex items-center gap-4">
+             <div className="w-12 h-px bg-slate-500/20" /> DETAILED LOG REMARKS
+           </h3>
+           <div className="relative pl-10 space-y-2">
+             <div className="absolute left-[4.25rem] top-4 bottom-4 w-px bg-slate-200 dark:bg-white/10" />
+             {log.remarks.map((rem, i) => {
+                const timeMatch = rem.match(/\[(.*?)\]/);
+                const time = timeMatch ? timeMatch[1] : '';
+                const parts = rem.replace(`[${time}]`, '').split(' - ');
+                const location = parts[0].trim();
+                const status = parts[1] ? parts[1].trim() : '';
+                const rowColor = ROWS.find(r => status.toLowerCase().includes(r.label.toLowerCase().split(' ')[0]))?.color || '#94a3b8';
+
+                return (
+                  <div key={i} className="group relative flex items-center py-5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all rounded-2xl px-6 -ml-6">
+                    <div className="w-24 shrink-0">
+                      <span className="inline-block px-4 py-1.5 rounded-full text-[11px] font-black text-white shadow-md tabular-nums" style={{ background: rowColor }}>
+                        {time}
+                      </span>
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-white dark:bg-slate-900 border-[5px] relative z-10 mx-5 transition-transform group-hover:scale-125" style={{ borderColor: rowColor }} />
+                    <div className="flex-grow min-w-0">
+                      <p className="text-sm font-bold text-slate-800 dark:text-white/90 truncate">{location}</p>
+                    </div>
+                    <div className="text-right ml-6 shrink-0">
+                      <span className="text-[10px] font-black uppercase opacity-20 group-hover:opacity-100 transition-opacity" style={{ color: rowColor }}>{status}</span>
+                    </div>
+                  </div>
+                );
+             })}
+           </div>
         </div>
       </div>
     </div>

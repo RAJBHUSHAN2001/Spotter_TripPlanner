@@ -1,6 +1,6 @@
 /* eslint-disable */
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, useMapEvents, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -12,7 +12,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const getIcon = (type) => {
+const getIcon = (type, isHovered = false) => {
   let color = '#3b82f6'; // Blue
   if (type === 'start') color = '#10b981'; // Emerald
   if (type === 'pickup') color = '#f59e0b'; // Amber
@@ -21,19 +21,11 @@ const getIcon = (type) => {
   if (type === 'fuel') color = '#f97316'; // Orange
   if (type === 'break') color = '#64748b'; // Slate
 
-  const label = type ? type.charAt(0).toUpperCase() + type.slice(1) : '';
-
   const svgIcon = `
-    <div class="flex items-center gap-2 group">
-      <div class="relative">
-        ${type === 'start' ? '<div class="absolute inset-0 bg-emerald-500/40 rounded-full animate-ping scale-150"></div>' : ''}
-        <div class="w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center relative z-10" style="background: ${color}">
-          <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
-        </div>
-        <div class="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-3 bg-white/50 backdrop-blur-sm -mt-0.5"></div>
-      </div>
-      <div class="bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-2xl transition-all group-hover:scale-110">
-        <p class="text-[8px] font-black uppercase text-white tracking-[0.2em] whitespace-nowrap">${label}</p>
+    <div class="relative flex items-center justify-center">
+      ${type === 'start' ? '<div class="absolute inset-0 bg-emerald-500/40 rounded-full animate-ping scale-150"></div>' : ''}
+      <div class="w-5 h-5 rounded-full border-2 border-white shadow-xl flex items-center justify-center relative z-10 transition-transform ${isHovered ? 'scale-125' : ''}" style="background: ${color}">
+        <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
       </div>
     </div>
   `;
@@ -41,9 +33,9 @@ const getIcon = (type) => {
   return L.divIcon({
     html: svgIcon,
     className: 'custom-div-icon',
-    iconSize: [120, 40],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -20]
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    tooltipAnchor: [0, -10]
   });
 };
 
@@ -51,7 +43,8 @@ function ChangeView({ bounds }) {
   const map = useMap();
   useEffect(() => {
     if (bounds && bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [100, 100], animate: true, duration: 2 });
+      // Auto-fit bounds with 60px padding as requested
+      map.fitBounds(bounds, { padding: [60, 60], animate: true, duration: 1.5 });
     }
   }, [bounds, map]);
   return null;
@@ -67,7 +60,11 @@ function MapClickHandler({ onMapClick }) {
 }
 
 const MapView = ({ route, theme, onMapClick, draftMarkers = {} }) => {
-  const points = route?.stops || [];
+  const [hoveredStop, setHoveredStop] = useState(null);
+
+  const points = (route?.stops || []).filter(
+    (stop) => Number.isFinite(stop?.lat) && Number.isFinite(stop?.lng)
+  );
   const polyline = route?.polyline || [];
   
   const typeMap = {
@@ -100,19 +97,23 @@ const MapView = ({ route, theme, onMapClick, draftMarkers = {} }) => {
       
       {polyline.length > 0 && (
         <>
+          {/* Animated Route Line */}
           <Polyline 
             positions={polyline} 
-            color="#3b82f6" 
-            weight={12} 
-            opacity={0.1}
+            color={theme === 'dark' ? "#1e293b" : "#cbd5e1"} 
+            weight={6} 
+            opacity={0.8}
             lineCap="round"
           />
           <Polyline 
             positions={polyline} 
-            color="#3b82f6" 
-            weight={3} 
-            opacity={0.8}
-            dashArray="1, 10"
+            pathOptions={{
+              color: "#3b82f6",
+              weight: 3,
+              opacity: 0.9,
+              dashArray: "8, 12",
+              className: "animated-polyline" // Targeted in index.css
+            }}
             lineCap="round"
           />
         </>
@@ -122,21 +123,28 @@ const MapView = ({ route, theme, onMapClick, draftMarkers = {} }) => {
       {points.map((stop, idx) => (
         <Marker 
           key={`stop-${idx}`} 
-          position={[stop.lat || 0, stop.lng || 0]} 
-          icon={getIcon(stop.type)}
+          position={[stop.lat, stop.lng]} 
+          icon={getIcon(stop.type, hoveredStop === idx)}
+          eventHandlers={{
+            mouseover: () => setHoveredStop(idx),
+            mouseout: () => setHoveredStop(null)
+          }}
         >
-          <Popup className="custom-popup">
-            <div className="p-4 min-w-[180px] bg-slate-900 text-white">
-              <p className="text-tactical text-blue-400 mb-2">{stop.type}</p>
-              <p className="font-bold text-sm leading-tight mb-3">{stop.location}</p>
+          <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={false} className="custom-tooltip">
+            <div className="p-3 min-w-[160px] bg-slate-900 text-white rounded-xl shadow-2xl border border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                 <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">{stop.type}</p>
+                 {stop.duration > 0 && <p className="text-[8px] font-bold opacity-40 italic">{stop.duration} HRS</p>}
+              </div>
+              <p className="font-bold text-[11px] leading-tight mb-2 truncate">{stop.location}</p>
               {stop.arrival_time && (
-                <div className="pt-3 border-t border-white/10 space-y-1">
-                  <p className="text-[8px] font-black opacity-40 tracking-[0.2em] uppercase">Tactical ETA</p>
-                  <p className="text-xs font-mono font-bold text-emerald-400">{stop.arrival_time}</p>
+                <div className="pt-2 border-t border-white/5">
+                  <p className="text-[8px] font-black opacity-30 uppercase tracking-widest">Tactical ETA</p>
+                  <p className="text-[10px] font-black text-emerald-400 tabular-nums">{stop.arrival_time}</p>
                 </div>
               )}
             </div>
-          </Popup>
+          </Tooltip>
         </Marker>
       ))}
 
@@ -147,12 +155,11 @@ const MapView = ({ route, theme, onMapClick, draftMarkers = {} }) => {
           position={[pos.lat, pos.lng]} 
           icon={getIcon(typeMap[field])}
         >
-          <Popup className="custom-popup">
-            <div className="p-3 text-center bg-slate-900 text-white">
-              <p className="text-tactical opacity-40 mb-1">Target Vector</p>
-              <p className="font-black text-[10px] text-blue-400">{typeMap[field].toUpperCase()}</p>
+          <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={true} className="custom-tooltip">
+            <div className="px-3 py-1.5 bg-blue-600 text-white rounded-full shadow-lg">
+              <p className="text-[8px] font-black uppercase tracking-widest">{typeMap[field]}</p>
             </div>
-          </Popup>
+          </Tooltip>
         </Marker>
       ))}
       

@@ -2,17 +2,25 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .hos_calculator import HOSCalculator
 from .utils import geocode, snap_to_road, get_route_geometry, get_point_at_distance, reverse_geocode
-import datetime
+from .constants import MAX_CYCLE_HOURS
 
 class PlanTripView(APIView):
     def post(self, request):
         current_loc_str = request.data.get('current_location') or request.data.get('currentLocation')
         pickup_loc_str = request.data.get('pickup_location') or request.data.get('pickupLocation')
         dropoff_loc_str = request.data.get('dropoff_location') or request.data.get('dropoffLocation')
-        cycle_used = request.data.get('cycle_used') or request.data.get('cycleUsed', 0)
+        cycle_used_raw = request.data.get('cycle_used') if request.data.get('cycle_used') is not None else request.data.get('cycleUsed', 0)
 
         if not all([current_loc_str, pickup_loc_str, dropoff_loc_str]):
             return Response({"error": "All locations are required."}, status=400)
+
+        try:
+            cycle_used = float(cycle_used_raw)
+        except (TypeError, ValueError):
+            return Response({"error": "Current cycle used must be a number."}, status=400)
+
+        if cycle_used < 0 or cycle_used > MAX_CYCLE_HOURS:
+            return Response({"error": f"Current cycle used must be between 0 and {int(MAX_CYCLE_HOURS)}."}, status=400)
 
         # 1. Geocode locations
         current_coords = geocode(current_loc_str)
@@ -35,13 +43,53 @@ class PlanTripView(APIView):
         if polyline1 is None or polyline2 is None:
             return Response({"error": "Could not calculate route."}, status=500)
 
+        # Accuracy Patch: Ensure stop names are human-readable for official DOT remarks
+        def get_readable_name(loc_str, coords):
+            if not loc_str: return "Unknown Location"
+            # If it looks like raw "lat, lng", reverse geocode it to a city/state
+            if "," in loc_str:
+                try:
+                    parts = loc_str.split(",")
+                    if len(parts) == 2:
+                        float(parts[0])
+                        float(parts[1])
+                        name = reverse_geocode(coords[0], coords[1])
+                        return name if name else loc_str
+                except ValueError:
+                    pass
+            return loc_str
+
+        readable_current = get_readable_name(current_loc_str, current_coords)
+        readable_pickup = get_readable_name(pickup_loc_str, pickup_coords)
+        readable_dropoff = get_readable_name(dropoff_loc_str, dropoff_coords)
+
+        # Accuracy Patch: Ensure stop names are human-readable for official DOT remarks
+        def get_readable_name(loc_str, coords):
+            if not loc_str: return "Unknown Location"
+            # If it looks like raw "lat, lng", reverse geocode it to a city/state
+            if "," in loc_str:
+                try:
+                    parts = loc_str.split(",")
+                    if len(parts) == 2:
+                        float(parts[0])
+                        float(parts[1])
+                        name = reverse_geocode(coords[0], coords[1])
+                        return name if name else loc_str
+                except ValueError:
+                    pass
+            return loc_str
+
+        readable_current = get_readable_name(current_loc_str, current_coords)
+        readable_pickup = get_readable_name(pickup_loc_str, pickup_coords)
+        readable_dropoff = get_readable_name(dropoff_loc_str, dropoff_coords)
+
         # 3. Calculate HOS Trip
         calculator = HOSCalculator(cycle_used=cycle_used)
         
         stops = [
-            {"name": current_loc_str, "type": "start", "lat": current_coords[0], "lng": current_coords[1]},
-            {"name": pickup_loc_str, "type": "pickup", "lat": pickup_coords[0], "lng": pickup_coords[1], "distance_from_prev": dist1, "duration_from_prev": dur1},
-            {"name": dropoff_loc_str, "type": "dropoff", "lat": dropoff_coords[0], "lng": dropoff_coords[1], "distance_from_prev": dist2, "duration_from_prev": dur2},
+            {"name": readable_current, "type": "start", "lat": current_coords[0], "lng": current_coords[1]},
+            {"name": readable_pickup, "type": "pickup", "lat": pickup_coords[0], "lng": pickup_coords[1], "distance_from_prev": dist1, "duration_from_prev": dur1},
+            {"name": readable_dropoff, "type": "dropoff", "lat": dropoff_coords[0], "lng": dropoff_coords[1], "distance_from_prev": dist2, "duration_from_prev": dur2},
         ]
         
         calculator.plan_trip(stops)
@@ -53,7 +101,7 @@ class PlanTripView(APIView):
         
         # 4. Enrich intermediate stops (Rest, Fuel, Break) with lat/lng and city names
         for stop in calculator.stops_log:
-            if not stop.get('lat'):
+            if stop.get('lat') is None or stop.get('lng') is None:
                 dist = stop.get('distance_along_route', 0)
                 coords = get_point_at_distance(full_polyline, dist)
                 if coords:
@@ -81,7 +129,7 @@ class PlanTripView(APIView):
                 "license_state": request.data.get('licenseState', ''),
                 "carrier": request.data.get('carrierName', ''),
                 "office_address": request.data.get('officeAddress', ''),
-                "home_terminal": request.data.get('homeTerminal', ''),
+                "home_terminal": request.data.get('homeTerminal', ''), # Added Home Terminal support
                 "manifest_no": request.data.get('manifestNo', '')
             }
         })

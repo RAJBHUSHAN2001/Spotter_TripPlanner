@@ -1,16 +1,16 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Package, Play, Clock, RotateCcw, Target, ShieldCheck, ChevronDown, ChevronUp, Truck, User, Building, FileText, Globe, AlertCircle } from 'lucide-react';
+import { MapPin, Package, Play, Clock, RotateCcw, Target, ShieldCheck, ChevronDown, ChevronRight, Truck, User, Building, FileText, Globe, AlertCircle, LayoutGrid } from 'lucide-react';
 
 const InputGroup = ({ label, name, icon: Icon, fieldId, type = "text", placeholder = "", value, onChange, onFocus, activeField, error }) => (
-  <div className="space-y-2">
+  <div className="space-y-1">
     <div className="flex items-center justify-between px-1">
       <label className={`text-tactical ${error ? 'text-red-500 opacity-100' : 'opacity-40'}`}>
-        {label} {error && <span className="lowercase font-normal tracking-normal ml-2">({error})</span>}
+        {label}
       </label>
       {activeField === fieldId && (
-        <motion.span layoutId="activeDot" className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+        <motion.span layoutId="activeDot" className="w-1 h-1 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
       )}
     </div>
     <div className="relative group">
@@ -22,29 +22,40 @@ const InputGroup = ({ label, name, icon: Icon, fieldId, type = "text", placehold
         onChange={onChange}
         onFocus={() => onFocus(fieldId)}
         className={`tactical-input pr-12 ${activeField === fieldId ? 'bg-white dark:bg-slate-800' : ''} ${error ? 'border-red-500/50 bg-red-500/5' : ''}`}
-        min={type === "number" ? "0" : undefined}
-        max={type === "number" && name === "cycleUsed" ? "70" : undefined}
       />
-      <div className={`absolute right-5 top-1/2 -translate-y-1/2 transition-all ${activeField === fieldId ? 'text-blue-600' : 'opacity-20'}`}>
+      <div className={`absolute right-4 md:right-5 top-1/2 -translate-y-1/2 transition-all ${activeField === fieldId ? 'text-blue-600' : 'opacity-20'}`}>
         {error ? <AlertCircle size={14} className="text-red-500" /> : <Icon size={14} />}
       </div>
     </div>
+    <AnimatePresence>
+      {error && (
+        <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="text-[9px] font-bold text-red-500 px-1 pt-1 uppercase tracking-wider">{error}</motion.p>
+      )}
+    </AnimatePresence>
   </div>
 );
 
-const SectionHeader = ({ icon: Icon, title }) => (
-  <div className="flex items-center gap-3 mb-4 mt-8 first:mt-0">
-    <div className="w-6 h-px bg-slate-500/10" />
-    <div className="flex items-center gap-2 text-tactical opacity-50">
-      <Icon size={12} className="text-blue-500/60" />
-      <span className="font-black">{title}</span>
+const SectionHeader = ({ icon: Icon, title, id, isCollapsed, onToggle }) => (
+  <button 
+    type="button"
+    onClick={() => onToggle(id)}
+    className="w-full flex items-center gap-3 mb-4 group cursor-pointer"
+  >
+    <div className="w-6 h-6 flex items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+      <Icon size={12} />
     </div>
-    <div className="flex-grow h-px bg-slate-500/10" />
-  </div>
+    <span className="text-tactical font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{title}</span>
+    <div className="flex-grow h-px bg-slate-500/10 mx-2" />
+    {isCollapsed ? <ChevronRight size={14} className="opacity-30" /> : <ChevronDown size={14} className="opacity-30" />}
+  </button>
 );
 
-const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveField }) => {
-  const [showAdvanced, setShowAdvanced] = useState(false);
+const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveField, prefillTrip }) => {
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    return saved ? JSON.parse(saved) : { identification: false, vectors: false, parameters: false };
+  });
+
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     currentLocation: '',
@@ -64,13 +75,25 @@ const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveFie
   });
 
   useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', JSON.stringify(collapsed));
+  }, [collapsed]);
+
+  const toggleSection = (id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
+
+  useEffect(() => {
     if (mapClickData && activeField) {
       const displayValue = mapClickData.address || `${mapClickData.lat.toFixed(5)}, ${mapClickData.lng.toFixed(5)}`;
       setFormData(prev => ({ ...prev, [activeField]: displayValue }));
-      // Clear error when value is set via map
       setErrors(prev => ({ ...prev, [activeField]: null }));
     }
   }, [mapClickData]);
+
+  useEffect(() => {
+    if (prefillTrip) {
+      setFormData(prev => ({ ...prev, ...prefillTrip }));
+      setErrors({});
+    }
+  }, [prefillTrip]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -80,16 +103,23 @@ const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveFie
 
   const validate = () => {
     const newErrors = {};
-    const required = ['driverName', 'vehicleId', 'currentLocation', 'pickupLocation', 'dropoffLocation', 'manifestNo'];
+    const required = {
+      driverName: 'Primary Driver required',
+      vehicleId: 'Vehicle ID required',
+      currentLocation: 'Origin Vector required',
+      dropoffLocation: 'Destination required',
+      homeTerminal: 'Home Terminal required'
+    };
     
-    required.forEach(field => {
+    Object.entries(required).forEach(([field, msg]) => {
       if (!formData[field] || formData[field].trim() === '') {
-        newErrors[field] = 'Required';
+        newErrors[field] = msg;
       }
     });
 
-    if (parseFloat(formData.cycleUsed) < 0 || parseFloat(formData.cycleUsed) > 70) {
-      newErrors.cycleUsed = 'Max 70 hrs';
+    const cycle = parseFloat(formData.cycleUsed);
+    if (isNaN(cycle) || cycle < 0 || cycle > 70) {
+      newErrors.cycleUsed = 'Must be 0-70 hours';
     }
 
     setErrors(newErrors);
@@ -125,87 +155,74 @@ const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveFie
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <SectionHeader icon={User} title="IDENTIFICATION" />
-      <div className="space-y-6">
-        <InputGroup label="PRIMARY DRIVER" icon={User} fieldId="driverName" placeholder="e.g. John R. Doe" {...commonProps('driverName')} />
-        <InputGroup label="CO-DRIVER (OPTIONAL)" icon={User} fieldId="coDriverName" placeholder="e.g. Jane Smith" {...commonProps('coDriverName')} />
-        <div className="grid grid-cols-2 gap-4">
-          <InputGroup label="VEHICLE ID" icon={Truck} fieldId="vehicleId" placeholder="TRK-9900" {...commonProps('vehicleId')} />
-          <InputGroup label="TRAILER ID" icon={Package} fieldId="trailerId" placeholder="TRL-1234" {...commonProps('trailerId')} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <InputGroup label="LICENSE PLATE" icon={Globe} fieldId="licensePlate" placeholder="NYC-1234" {...commonProps('licensePlate')} />
-          <InputGroup label="PLATE STATE" icon={Globe} fieldId="licenseState" placeholder="NY" {...commonProps('licenseState')} />
-        </div>
-      </div>
-
-      <SectionHeader icon={Target} title="MISSION VECTORS" />
-      <div className="space-y-6">
-        <InputGroup label="ORIGIN VECTOR" icon={MapPin} fieldId="currentLocation" placeholder="Select on map or type address..." {...commonProps('currentLocation')} />
-        <InputGroup label="HUB INTERCEPT" icon={Package} fieldId="pickupLocation" placeholder="Loading point..." {...commonProps('pickupLocation')} />
-        <InputGroup label="DESTINATION TARGET" icon={Target} fieldId="dropoffLocation" placeholder="Final delivery point..." {...commonProps('dropoffLocation')} />
-      </div>
-
-      <SectionHeader icon={ShieldCheck} title="LOGISTICS PARAMETERS" />
-      <div className="space-y-6">
-        <InputGroup label="SHIPPING DOC / MANIFEST #" icon={FileText} fieldId="manifestNo" placeholder="BOL-1002345" {...commonProps('manifestNo')} />
-        <InputGroup label="ACTIVE CYCLE (HRS)" icon={Clock} fieldId="cycleUsed" type="number" placeholder="0 - 70" {...commonProps('cycleUsed')} />
-        
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full flex items-center justify-between py-4 px-4 group bg-slate-500/5 hover:bg-slate-500/10 rounded-2xl transition-all border border-black/5 dark:border-white/5"
-        >
-          <div className="flex items-center gap-3">
-            <Building size={14} className="text-blue-500 opacity-60 group-hover:opacity-100" />
-            <span className="text-[11px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Company Metadata</span>
-          </div>
-          {showAdvanced ? <ChevronUp size={14} className="opacity-30" /> : <ChevronDown size={14} className="opacity-30" />}
-        </button>
-
+      <div>
+        <SectionHeader icon={User} title="IDENTIFICATION" id="identification" isCollapsed={collapsed.identification} onToggle={toggleSection} />
         <AnimatePresence>
-          {showAdvanced && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden space-y-4 pb-4 px-1"
-            >
-              <InputGroup label="CARRIER IDENTITY" icon={Building} fieldId="carrierName" placeholder="Carrier Name Inc." {...commonProps('carrierName')} />
-              <InputGroup label="HEADQUARTERS" icon={MapPin} fieldId="officeAddress" placeholder="123 Logistics Way, City, ST" {...commonProps('officeAddress')} />
-              <InputGroup label="HOME TERMINAL" icon={MapPin} fieldId="homeTerminal" placeholder="City Terminal HQ" {...commonProps('homeTerminal')} />
+          {!collapsed.identification && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-4 px-1">
+              <InputGroup label="PRIMARY DRIVER" icon={User} fieldId="driverName" placeholder="e.g. John R. Doe" {...commonProps('driverName')} />
+              <InputGroup label="CO-DRIVER (OPTIONAL)" icon={User} fieldId="coDriverName" placeholder="e.g. Jane Smith" {...commonProps('coDriverName')} />
+              <div className="grid grid-cols-2 gap-4">
+                <InputGroup label="VEHICLE ID" icon={Truck} fieldId="vehicleId" placeholder="TRK-9900" {...commonProps('vehicleId')} />
+                <InputGroup label="TRAILER ID" icon={Package} fieldId="trailerId" placeholder="TRL-1234" {...commonProps('trailerId')} />
+              </div>
+              <InputGroup label="HOME TERMINAL" icon={MapPin} fieldId="homeTerminal" placeholder="City, ST (e.g. Portland, OR)" {...commonProps('homeTerminal')} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      <div className="flex gap-4 pt-8">
+      <div>
+        <SectionHeader icon={Target} title="MISSION VECTORS" id="vectors" isCollapsed={collapsed.vectors} onToggle={toggleSection} />
+        <AnimatePresence>
+          {!collapsed.vectors && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-4 px-1">
+              <InputGroup label="ORIGIN VECTOR" icon={MapPin} fieldId="currentLocation" placeholder="Select on map..." {...commonProps('currentLocation')} />
+              <InputGroup label="HUB INTERCEPT" icon={Package} fieldId="pickupLocation" placeholder="Loading point..." {...commonProps('pickupLocation')} />
+              <InputGroup label="DESTINATION TARGET" icon={Target} fieldId="dropoffLocation" placeholder="Final delivery..." {...commonProps('dropoffLocation')} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div>
+        <SectionHeader icon={ShieldCheck} title="LOGISTICS PARAMETERS" id="parameters" isCollapsed={collapsed.parameters} onToggle={toggleSection} />
+        <AnimatePresence>
+          {!collapsed.parameters && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-4 px-1 pb-4">
+              <InputGroup label="SHIPPING DOC / MANIFEST #" icon={FileText} fieldId="manifestNo" placeholder="BOL-1002345" {...commonProps('manifestNo')} />
+              <InputGroup label="ACTIVE CYCLE (0-70 HRS)" icon={Clock} fieldId="cycleUsed" type="number" {...commonProps('cycleUsed')} />
+              <InputGroup label="CARRIER IDENTITY" icon={Building} fieldId="carrierName" placeholder="Carrier Name Inc." {...commonProps('carrierName')} />
+              <InputGroup label="HEADQUARTERS" icon={Globe} fieldId="officeAddress" placeholder="Main Office Address" {...commonProps('officeAddress')} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="flex gap-4 pt-4">
         <button
           type="button"
           onClick={handleReset}
-          className="w-16 h-16 rounded-2xl flex items-center justify-center bg-slate-200/40 dark:bg-slate-800/40 hover:bg-red-500/10 hover:text-red-500 transition-all border border-black/5 dark:border-white/5"
+          className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-red-500 transition-all border border-black/5 dark:border-white/5"
         >
-          <RotateCcw size={18} />
+          <RotateCcw size={16} />
         </button>
         
         <button
           id="main-submit-btn"
           disabled={loading}
-          className={`flex-grow btn-premium flex items-center justify-center gap-4 ${Object.keys(errors).length > 0 ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+          className="flex-grow btn-premium flex items-center justify-center gap-3"
         >
           {loading ? (
-            <div className="w-5 h-5 border-2 border-slate-400 border-t-slate-900 rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             <>
               <Play size={14} fill="currentColor" />
-              <span>Initiate Calculation</span>
+              <span>Initiate Plan</span>
             </>
           )}
         </button>
       </div>
-      {Object.keys(errors).length > 0 && (
-        <p className="text-[10px] font-bold text-red-500/60 text-center uppercase tracking-widest pt-2">Fix highlighted fields to proceed</p>
-      )}
     </form>
   );
 };

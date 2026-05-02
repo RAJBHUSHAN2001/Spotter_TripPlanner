@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = '/api/trip-planner';
+import { API_BASE_URL } from '../config/api';
 
 export const planTrip = async (data) => {
   try {

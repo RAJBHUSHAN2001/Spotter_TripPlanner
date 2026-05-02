@@ -2,13 +2,15 @@
 # This script opens two new PowerShell windows to run the backend and frontend simultaneously.
 
 Write-Host "🚀 Launching ELD Trip Planner..." -ForegroundColor Cyan
+$projectRoot = Get-Location
 
 # Start Backend
 Write-Host "📦 Starting Backend (Django)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; .\venv\Scripts\activate; python manage.py runserver"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot\backend'; .\venv\Scripts\activate; python manage.py runserver"
 
 # Start Frontend
 Write-Host "🎨 Starting Frontend (React)..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:Path += ';C:\Program Files\nodejs'; cd '$projectRoot\frontend'; npm run dev"
 
 Write-Host "✅ Both services are launching in separate windows." -ForegroundColor Green
+

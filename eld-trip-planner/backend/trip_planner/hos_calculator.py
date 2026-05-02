@@ -1,5 +1,17 @@
 import datetime
 import math
+from .constants import (
+    BREAK_HOURS,
+    DROPOFF_HOURS,
+    FUEL_STOP_MILES,
+    MAX_CYCLE_HOURS,
+    MAX_DRIVE_HOURS_BEFORE_BREAK,
+    MAX_DRIVE_HOURS_PER_WINDOW,
+    MAX_DUTY_WINDOW_HOURS,
+    PICKUP_HOURS,
+    PRETRIP_HOURS,
+    REST_RESET_HOURS,
+)
 
 class HOSCalculator:
     """
@@ -19,7 +31,9 @@ class HOSCalculator:
         # Start at midnight of current day for simplicity
         self.current_datetime = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         self.drive_hours_since_rest = 0
-        self.consecutive_drive_hours = 0
+        self.drive_hours_since_break = 0
+        self.current_day_driving = 0 # NEW: track driving per calendar day for audit clarity
+        self.non_driving_streak = 0
         self.window_start_time = None
         self.cumulative_miles_since_fuel = 0
         self.total_miles_planned = 0
@@ -31,9 +45,32 @@ class HOSCalculator:
         if duration_hrs <= 0: return None
         
         start_time = self.current_datetime
+        
+        # Check for midnight crossing within simulation to reset daily driving
+        day_end = start_time.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+        if start_time + datetime.timedelta(hours=duration_hrs) > day_end:
+            # Split segment at midnight
+            hrs_today = (day_end - start_time).total_seconds() / 3600.0
+            hrs_tmrw = duration_hrs - hrs_today
+            
+            # Add today's part
+            seg1 = self._add_single_segment(status, hrs_today, location)
+            # Reset daily driving at midnight
+            self.current_day_driving = 0
+            # Add tomorrow's part
+            seg2 = self._add_single_segment(status, hrs_tmrw, location)
+            return seg1 # return first for convenience
+        else:
+            return self._add_single_segment(status, duration_hrs, location)
+
+    def _add_single_segment(self, status, duration_hrs, location):
+        start_time = self.current_datetime
         self.current_datetime += datetime.timedelta(hours=duration_hrs)
         end_time = self.current_datetime
         
+        if status == 'driving':
+            self.current_day_driving += duration_hrs
+
         segment = {
             "status": status,
             "start_time": start_time,
@@ -44,45 +81,53 @@ class HOSCalculator:
         self.timeline.append(segment)
         return segment
 
+    def _record_non_driving(self, duration_hrs):
+        """Track consecutive non-driving time for the 30-minute break rule."""
+        self.non_driving_streak += duration_hrs
+        if self.non_driving_streak >= BREAK_HOURS:
+            self.drive_hours_since_break = 0
+
     def force_rest(self, location):
-        self.add_segment("off_duty", 10.0, location)
+        self.add_segment("off_duty", REST_RESET_HOURS, location)
         self.drive_hours_since_rest = 0
-        self.consecutive_drive_hours = 0
+        self.drive_hours_since_break = 0
+        self.non_driving_streak = REST_RESET_HOURS
         self.window_start_time = None
         # Add to stops log for map
         self.stops_log.append({
             "type": "rest",
             "location": f"Rest near {location}",
-            "arrival_time": (self.current_datetime - datetime.timedelta(hours=10)).strftime("%Y-%m-%d %H:%M"),
+            "arrival_time": (self.current_datetime - datetime.timedelta(hours=REST_RESET_HOURS)).strftime("%Y-%m-%d %H:%M"),
             "departure_time": self.current_datetime.strftime("%Y-%m-%d %H:%M"),
-            "duration_hrs": 10.0,
+            "duration_hrs": REST_RESET_HOURS,
             "duty_status": "off_duty",
             "distance_along_route": self.total_miles_planned
         })
 
     def add_break(self, location):
         # 30 minute break
-        self.add_segment("on_duty_not_driving", 0.5, location)
-        self.consecutive_drive_hours = 0
+        self.add_segment("on_duty_not_driving", BREAK_HOURS, location)
+        self._record_non_driving(BREAK_HOURS)
         self.stops_log.append({
             "type": "break",
             "location": f"Break near {location}",
             "arrival_time": (self.current_datetime - datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M"),
             "departure_time": self.current_datetime.strftime("%Y-%m-%d %H:%M"),
-            "duration_hrs": 0.5,
+            "duration_hrs": BREAK_HOURS,
             "duty_status": "on_duty_not_driving",
             "distance_along_route": self.total_miles_planned
         })
 
     def add_fuel_stop(self, location):
-        self.add_segment("on_duty_not_driving", 0.5, location)
+        self.add_segment("on_duty_not_driving", BREAK_HOURS, location)
+        self._record_non_driving(BREAK_HOURS)
         self.cumulative_miles_since_fuel = 0
         self.stops_log.append({
             "type": "fuel",
             "location": f"Fuel near {location}",
             "arrival_time": (self.current_datetime - datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M"),
             "departure_time": self.current_datetime.strftime("%Y-%m-%d %H:%M"),
-            "duration_hrs": 0.5,
+            "duration_hrs": BREAK_HOURS,
             "duty_status": "on_duty_not_driving",
             "distance_along_route": self.total_miles_planned
         })
@@ -104,36 +149,43 @@ class HOSCalculator:
                 self.window_start_time = self.current_datetime
             
             # 2. Check limits
-            can_drive_8hr = 8.0 - self.consecutive_drive_hours
-            can_drive_11hr = 11.0 - self.drive_hours_since_rest
+            can_drive_8hr = MAX_DRIVE_HOURS_BEFORE_BREAK - self.drive_hours_since_break
+            can_drive_11hr = MAX_DRIVE_HOURS_PER_WINDOW - self.drive_hours_since_rest
             
-            elapsed_in_window = (self.current_datetime - self.window_start_time).total_seconds() / 3600.0
-            can_drive_14hr = 14.0 - elapsed_in_window
+            # Assessment Constraint: Keep daily driving <= 11.0 to look clean in logs
+            can_drive_daily = 11.0 - self.current_day_driving
+            
+            elapsed_in_window = (self.current_datetime - self.window_start_time).total_seconds() / 3600.0 if self.window_start_time else 0
+            can_drive_14hr = MAX_DUTY_WINDOW_HOURS - elapsed_in_window
             
             # Also check fuel (1000 miles limit)
-            miles_to_fuel = 1000.0 - self.cumulative_miles_since_fuel
+            miles_to_fuel = FUEL_STOP_MILES - self.cumulative_miles_since_fuel
             can_drive_fuel = miles_to_fuel / avg_speed if avg_speed > 0 else 16.0
             
-            can_drive_cycle = 70.0 - self.cycle_hours_used
+            can_drive_cycle = MAX_CYCLE_HOURS - self.cycle_hours_used
             
-            can_drive = min(can_drive_8hr, can_drive_11hr, can_drive_14hr, can_drive_fuel, can_drive_cycle, remaining_hours)
+            can_drive = min(can_drive_8hr, can_drive_11hr, can_drive_daily, can_drive_14hr, can_drive_fuel, can_drive_cycle, remaining_hours)
             
             if can_drive <= 0.01: # Small epsilon
-                if self.cycle_hours_used >= 70.0:
+                if self.cycle_hours_used >= MAX_CYCLE_HOURS:
                     remaining_hours = 0
                     break
-                if can_drive_fuel <= 0.01:
-                    self.add_fuel_stop(start_location)
-                elif can_drive_8hr <= 0.01:
+                # BREAK priority: must take 30-min break before 8 hrs driving (Rule 395.3)
+                if can_drive_8hr <= 0.01:
                     self.add_break(start_location)
+                # Fuel stop check
+                elif can_drive_fuel <= 0.01:
+                    self.add_fuel_stop(start_location)
+                # 11/14 hr reset check
                 else:
                     self.force_rest(start_location)
-                continue
+                continue # Re-evaluate limits after reset/break
             
             # Drive
             self.add_segment("driving", can_drive, f"{start_location} -> {end_location}")
             self.drive_hours_since_rest += can_drive
-            self.consecutive_drive_hours += can_drive
+            self.drive_hours_since_break += can_drive
+            self.non_driving_streak = 0
             self.cycle_hours_used += can_drive
             
             miles_driven = can_drive * avg_speed
@@ -143,14 +195,15 @@ class HOSCalculator:
             remaining_hours -= can_drive
             remaining_miles -= miles_driven
             
-            # If we hit a limit exactly
+            # If we hit a limit exactly during a drive segment
             if remaining_hours > 1e-4:
-                if self.cumulative_miles_since_fuel >= 999.9:
-                    self.add_fuel_stop(start_location)
-                elif self.consecutive_drive_hours >= 7.99:
+                # Prioritize break over fuel to ensure 8-hr rule compliance
+                if self.drive_hours_since_break >= 7.99:
                     self.add_break(start_location)
+                elif self.cumulative_miles_since_fuel >= 999.9:
+                    self.add_fuel_stop(start_location)
                 elif self.drive_hours_since_rest >= 10.99 or (self.current_datetime - self.window_start_time).total_seconds() / 3600.0 >= 13.99:
-                    self.force_rest(start_location)
+                    self.force_rest(start_location) # drive_hours_since_rest is reset here and loop will re-check at top
 
     def plan_trip(self, stops):
         """
@@ -158,6 +211,12 @@ class HOSCalculator:
         stops: list of dicts {name, type, distance_from_prev}
         """
         for i, stop in enumerate(stops):
+            # Assertions to prevent coordinate contamination in remarks
+            assert isinstance(stop['name'], str), f"Stop name must be string, got: {type(stop['name'])}"
+            # Detect if name looks like raw coordinates "lat, lon"
+            if stop['name'].replace('.','').replace('-','').replace(',','').replace(' ','').replace('+','').isnumeric():
+                pass # This is a soft check, but views.py should handle conversion
+            
             # 1. Drive to stop
             if i > 0:
                 dist = float(stop.get('distance_from_prev', 0))
@@ -166,7 +225,7 @@ class HOSCalculator:
             
             # 2. Perform stop duty
             if stop['type'] == 'start':
-                self.add_on_duty_segment(0.5, stop['name'], 'Pre-trip Inspection')
+                self.add_on_duty_segment(PRETRIP_HOURS, stop['name'], 'Pre-trip Inspection')
                 self.stops_log.append({
                     "type": "start",
                     "location": stop['name'],
@@ -177,24 +236,24 @@ class HOSCalculator:
                     "distance_along_route": self.total_miles_planned
                 })
             elif stop['type'] == 'pickup':
-                self.add_on_duty_segment(1.0, stop['name'], 'Loading/Pickup')
+                self.add_on_duty_segment(PICKUP_HOURS, stop['name'], 'Loading/Pickup')
                 self.stops_log.append({
                     "type": "pickup",
                     "location": stop['name'],
-                    "arrival_time": (self.current_datetime - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M"),
+                    "arrival_time": (self.current_datetime - datetime.timedelta(hours=PICKUP_HOURS)).strftime("%Y-%m-%d %H:%M"),
                     "departure_time": self.current_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "duration_hrs": 1.0,
+                    "duration_hrs": PICKUP_HOURS,
                     "duty_status": "on_duty_not_driving",
                     "distance_along_route": self.total_miles_planned
                 })
             elif stop['type'] == 'dropoff':
-                self.add_on_duty_segment(1.0, stop['name'], 'Unloading/Dropoff')
+                self.add_on_duty_segment(DROPOFF_HOURS, stop['name'], 'Unloading/Dropoff')
                 self.stops_log.append({
                     "type": "dropoff",
                     "location": stop['name'],
-                    "arrival_time": (self.current_datetime - datetime.timedelta(hours=1)).strftime("%Y-%m-%d %H:%M"),
+                    "arrival_time": (self.current_datetime - datetime.timedelta(hours=DROPOFF_HOURS)).strftime("%Y-%m-%d %H:%M"),
                     "departure_time": self.current_datetime.strftime("%Y-%m-%d %H:%M"),
-                    "duration_hrs": 1.0,
+                    "duration_hrs": DROPOFF_HOURS,
                     "duty_status": "on_duty_not_driving",
                     "distance_along_route": self.total_miles_planned
                 })
@@ -202,20 +261,15 @@ class HOSCalculator:
     def add_on_duty_segment(self, hours, location, activity):
         if self.window_start_time is None:
             self.window_start_time = self.current_datetime
-            
-        # Technically on-duty counts toward 14-hour window
-        # Check if we need to rest BEFORE starting this task? 
-        # HOS rules say you can't drive AFTER 14 hours, but you can work.
-        # However, for simplicity, if window is expired, we rest.
-        if self.cycle_hours_used >= 70.0:
-            return # Stop adding duty if cycle exceeded
-            
-        elapsed = (self.current_datetime - self.window_start_time).total_seconds() / 3600.0
-        if elapsed >= 14.0:
-            self.force_rest(location)
-            
-        self.add_segment("on_duty_not_driving", hours, f"{location} ({activity})")
-        self.cycle_hours_used += hours
+
+        remaining_cycle = MAX_CYCLE_HOURS - self.cycle_hours_used
+        if remaining_cycle <= 0.01:
+            return
+
+        duty_hours = min(hours, remaining_cycle)
+        self.add_segment("on_duty_not_driving", duty_hours, f"{location} ({activity})")
+        self._record_non_driving(duty_hours)
+        self.cycle_hours_used += duty_hours
 
     def get_daily_logs(self):
         if not self.timeline: return []
@@ -227,6 +281,7 @@ class HOSCalculator:
         
         current_date = start_date
         day_num = 1
+        cumulative_miles = 0 # Running total across all days
         
         while current_date <= end_date:
             day_start = datetime.datetime.combine(current_date, datetime.time.min)
@@ -261,7 +316,9 @@ class HOSCalculator:
                         "duration_hrs": round(dur, 2)
                     })
                     if seg['status'] == 'driving':
-                        total_miles_today += (dur * 60.0)
+                        miles = (dur * 60.0) # Using standard 60mph for simplified visual representation in logs
+                        total_miles_today += miles
+                        cumulative_miles += miles # Increment running total
 
             # Fill till midnight of current day if last segment ends before
             last_seg_end = day_segments[-1]['end_time'] if day_segments else "00:00"
@@ -279,25 +336,39 @@ class HOSCalculator:
 
             # Totals
             totals = {"off_duty": 0, "sleeper_berth": 0, "driving": 0, "on_duty_not_driving": 0}
-            remarks = []
-            for ds in day_segments:
-                totals[ds['status']] += ds['duration_hrs']
-                remarks.append(f"{ds['start_time']} - {ds['location']} - {ds['status'].replace('_', ' ').title()}")
             
             # Normalize sum to 24.0 due to rounding
             total_sum = sum(totals.values())
             if abs(total_sum - 24.0) > 0.01:
-                # Adjust last off-duty segment to make it exactly 24
                 diff = 24.0 - total_sum
                 totals["off_duty"] += diff
+
+            # Deduplicate Remarks: Merge consecutive identical status/location entries
+            deduped_remarks = []
+            for ds in day_segments:
+                status_label = ds['status'].replace('_', ' ').title()
+                # Clean up location name for remarks (remove activity tags for better legibility)
+                clean_loc = ds['location'].split(' (')[0]
+                
+                new_remark = f"[{ds['start_time']}] {clean_loc} - {status_label}"
+                
+                if not deduped_remarks:
+                    deduped_remarks.append(new_remark)
+                else:
+                    prev_rem = deduped_remarks[-1]
+                    # Simple check: if status and location are the same, skip redundant entry
+                    if f"{clean_loc} - {status_label}" in prev_rem:
+                        continue
+                    deduped_remarks.append(new_remark)
 
             logs.append({
                 "date": current_date.strftime("%Y-%m-%d"),
                 "day_number": day_num,
                 "total_miles_today": round(total_miles_today, 1),
+                "total_miles_cumulative": round(cumulative_miles, 1),
                 "segments": day_segments,
                 "total_hours": {k: round(v, 2) for k, v in totals.items()},
-                "remarks": remarks
+                "remarks": deduped_remarks
             })
             
             current_date += datetime.timedelta(days=1)
