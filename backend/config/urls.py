@@ -21,26 +21,30 @@ from django.conf import settings
 from django.conf.urls.static import static
 import os
 
-# Serve the frontend index.html from the frontend directory
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..', 'frontend')
+# Serve the frontend index.html from the project root
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..')
 
 
 def serve_frontend(request):
     from django.http import FileResponse
-    return FileResponse(open(os.path.join(FRONTEND_DIR, 'index.html'), 'rb'))
+    path = os.path.join(FRONTEND_DIR, 'index.html')
+    return FileResponse(open(path, 'rb'))
 
 
-def serve_frontend_file(request, filename):
+def serve_frontend_file(request, path):
     from django.http import FileResponse, Http404
-    filepath = os.path.join(FRONTEND_DIR, filename)
-    if os.path.exists(filepath):
-        return FileResponse(open(filepath, 'rb'))
+    import mimetypes
+    
+    filepath = os.path.join(FRONTEND_DIR, path)
+    if os.path.exists(filepath) and os.path.isfile(filepath):
+        content_type, _ = mimetypes.guess_type(filepath)
+        return FileResponse(open(filepath, 'rb'), content_type=content_type)
     raise Http404
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/trip-planner/', include('trip_planner.urls')),
-    path('<str:filename>', serve_frontend_file, name='frontend-file'),
+    path('<path:path>', serve_frontend_file, name='frontend-file'),
     path('', serve_frontend, name='frontend'),
 ]
