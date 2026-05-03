@@ -62,54 +62,59 @@ const LogSheets = ({ logs, meta }) => {
   }
 
   return (
-    <div className="flex flex-col gap-6 relative">
-      {/* Sticky Header with Navigation and Export - Compact Tactical Version */}
-      <div className="sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 bg-[var(--bg-main)]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 px-8 py-3 shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-blue-600 rounded-lg shadow-lg">
-              <FileText className="text-white w-4 h-4" />
+    <div className="flex flex-col gap-4 relative">
+      {/* Ultra-Thin Tactical Header - Single Row Layout */}
+      <div className="sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 bg-[var(--bg-main)]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 px-8 py-2.5 shadow-lg">
+        <div className="flex items-center gap-6">
+          {/* Title Section */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="p-1.5 bg-blue-600 rounded-lg shadow-md">
+              <FileText className="text-white w-3.5 h-3.5" />
             </div>
-            <div>
-              <h2 className="text-base font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none">
-                HOS Compliance Logs
+            <div className="hidden lg:block">
+              <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none">
+                HOS Compliance
               </h2>
-              <p className="text-[8px] font-black opacity-30 uppercase tracking-[0.2em]">Record Manifest</p>
             </div>
           </div>
+
+          <div className="h-6 w-px bg-slate-500/10 hidden lg:block" />
+
+          {/* Navigation Pills - Now in the center/main area */}
+          <div className="flex-grow flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {logs.map((log, idx) => {
+              const date = new Date(log.date.replace(/-/g, '/'));
+              const hasViolation = log.total_hours?.driving > 11.0;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => scrollToDay(idx)}
+                  className={`relative px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                >
+                  Day {idx + 1}
+                  {hasViolation && (
+                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white dark:border-slate-900" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-6 w-px bg-slate-500/10" />
           
+          {/* Compact Export Button */}
           <button 
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-[10px] font-black hover:scale-105 transition-all shadow-md disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-[9px] font-black hover:scale-105 transition-all shadow-md disabled:opacity-50 shrink-0"
           >
             {exporting ? (
               <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Download size={12} />
+              <Download size={11} />
             )}
-            <span>EXPORT PDF</span>
+            <span className="hidden sm:inline">EXPORT PDF</span>
           </button>
-        </div>
-
-        {/* Navigation Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {logs.map((log, idx) => {
-            const date = new Date(log.date.replace(/-/g, '/'));
-            const hasViolation = log.total_hours?.driving > 11.0;
-            return (
-              <button
-                key={idx}
-                onClick={() => scrollToDay(idx)}
-                className={`relative px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-              >
-                Day {idx + 1} — {date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                {hasViolation && (
-                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm" />
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
 
