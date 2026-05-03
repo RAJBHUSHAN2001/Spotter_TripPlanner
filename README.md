@@ -65,7 +65,7 @@ Spotter/
 
 The project is now structured with frontend at root for easy Vercel deployment. 
 
-### Option 1: Automated Launch (Recommended)
+### Option 1: Automated Launch (Unified)
 ```powershell
 # 1. Environment Setup (if node is not in path)
 $env:Path += ";C:\Program Files\nodejs"
@@ -73,20 +73,19 @@ $env:Path += ";C:\Program Files\nodejs"
 # 2. Install all dependencies
 npm install
 
-# 3. Launch Mission Control (Starts both Backend & Frontend)
+# 3. Launch Mission Control (Starts BOTH Backend & Frontend)
 npm run dev
 ```
 
-### Option 2: Manual Terminal Setup
+### Option 2: Manual Terminal Setup (Advanced)
+If you want to see separate logs or debug one specifically:
 ```powershell
 # Terminal 1: Backend (Django)
 cd backend
-pip install -r requirements.txt
 python manage.py runserver
 
 # Terminal 2: Frontend (React)
 $env:Path += ";C:\Program Files\nodejs"
-npm install
 npm run dev
 ```
 
