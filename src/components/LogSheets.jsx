@@ -62,33 +62,33 @@ const LogSheets = ({ logs, meta }) => {
   }
 
   return (
-    <div className="flex flex-col gap-8 relative">
-      {/* Sticky Header with Navigation and Export */}
-      <div className="sticky top-0 z-[2000] bg-[var(--bg-main)]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 px-6 py-5 shadow-xl">
+    <div className="flex flex-col gap-6 relative">
+      {/* Sticky Header with Navigation and Export - Compact Tactical Version */}
+      <div className="sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 bg-[var(--bg-main)]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 px-8 py-3 shadow-xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-blue-600 rounded-lg shadow-lg">
-              <FileText className="text-white w-5 h-5" />
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-600 rounded-lg shadow-lg">
+              <FileText className="text-white w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">
+              <h2 className="text-base font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none">
                 HOS Compliance Logs
               </h2>
-              <p className="text-[10px] font-black opacity-30 uppercase tracking-[0.2em] -mt-1">Official Records Repository</p>
+              <p className="text-[8px] font-black opacity-30 uppercase tracking-[0.2em]">Record Manifest</p>
             </div>
           </div>
           
           <button 
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-3 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-black hover:scale-105 transition-all shadow-xl disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-[10px] font-black hover:scale-105 transition-all shadow-md disabled:opacity-50"
           >
             {exporting ? (
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Download size={16} />
+              <Download size={12} />
             )}
-            <span>EXPORT PDF DOCUMENT</span>
+            <span>EXPORT PDF</span>
           </button>
         </div>
 
