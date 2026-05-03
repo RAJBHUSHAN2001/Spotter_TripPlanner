@@ -148,19 +148,26 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True # Enable for debugging; restrict in production
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = [
+    'https://spotter-trip-planner-ten.vercel.app',
     'https://spotter-trip-planner.vercel.app',
     'https://spotter-eld.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174'
 ]
 
-CSRF_COOKIE_SECURE = False # Set to True in production with HTTPS
+CSRF_TRUSTED_ORIGINS = [
+    'https://spotter-trip-planner-ten.vercel.app',
+    'https://spotter-trip-planner.vercel.app',
+    'https://spotter-eld.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174',
+]
+
+CSRF_COOKIE_SECURE = False
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
