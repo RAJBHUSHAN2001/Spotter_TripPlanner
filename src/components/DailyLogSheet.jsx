@@ -228,7 +228,10 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
                 return (
                   <div key={i} className="group relative flex items-center py-5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all rounded-2xl px-6 -ml-6">
                     <div className="w-24 shrink-0">
-                      <span className="inline-block px-4 py-1.5 rounded-full text-[11px] font-black text-white shadow-md tabular-nums" style={{ background: rowColor }}>
+                      <span 
+                        className="inline-block px-4 py-1.5 rounded-full text-[11px] font-black text-white shadow-md tabular-nums" 
+                        style={{ background: rowColor === 'currentColor' ? '#334155' : rowColor }}
+                      >
                         {time}
                       </span>
                     </div>

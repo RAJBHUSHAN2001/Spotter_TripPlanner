@@ -64,7 +64,7 @@ const LogSheets = ({ logs, meta }) => {
   return (
     <div className="flex flex-col gap-8 relative">
       {/* Sticky Header with Navigation and Export */}
-      <div className="sticky top-0 z-[2000] -mx-4 px-4 py-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 flex flex-col gap-4">
+      <div className="sticky top-0 z-[2000] bg-[var(--bg-main)]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 px-6 py-5 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-2.5 bg-blue-600 rounded-lg shadow-lg">
