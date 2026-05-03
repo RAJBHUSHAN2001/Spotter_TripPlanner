@@ -6,7 +6,7 @@ import { User, Truck, Globe, Clock, ShieldCheck, AlertCircle } from 'lucide-reac
 const ROWS = [
   { id: 'off_duty', label: 'OFF DUTY', color: '#2563eb' },
   { id: 'sleeper_berth', label: 'SLEEPER BERTH', color: '#8b5cf6' },
-  { id: 'driving', label: 'DRIVING', color: '#0f172a' },
+  { id: 'driving', label: 'DRIVING', color: 'currentColor' }, // Using currentColor to adapt to theme
   { id: 'on_duty_not_driving', label: 'ON DUTY (ND)', color: '#10b981' }
 ];
 
