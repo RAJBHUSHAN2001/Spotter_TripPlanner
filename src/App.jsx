@@ -265,9 +265,9 @@ function App() {
                     >
                       <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-20 text-center py-5">Assignment</p>
                       {[
-                        { id: 'currentLocation', label: 'Origin Point', color: 'text-emerald-500' },
-                        { id: 'pickupLocation', label: 'Hub Intercept', color: 'text-amber-500' },
-                        { id: 'dropoffLocation', label: 'Target Dest', color: 'text-rose-500' }
+                        { id: 'currentLocation', label: 'Origin Point', color: 'text-emerald-500', dot: 'bg-emerald-500' },
+                        { id: 'pickupLocation', label: 'Hub Intercept', color: 'text-amber-500', dot: 'bg-amber-500' },
+                        { id: 'dropoffLocation', label: 'Target Dest', color: 'text-rose-500', dot: 'bg-rose-500' }
                       ].map(item => (
                         <button 
                           key={item.id}
@@ -275,7 +275,6 @@ function App() {
                             const { lat, lng } = clickMenu;
                             setClickMenu(null);
                             
-                            // Immediately set the coordinates as a placeholder while geocoding
                             const coordsStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                             setDraftMarkers(prev => ({ ...prev, [item.id]: { lat, lng } }));
                             setMapClickData({ lat, lng, address: coordsStr });
@@ -290,10 +289,10 @@ function App() {
                               console.error("Geocoding failed, keeping coordinates.");
                             }
                           }}
-                          className={`w-full text-left px-8 py-5 rounded-[2rem] text-[11px] font-black uppercase ${item.color} hover:bg-slate-500/10 transition-all flex items-center gap-4 group`}
+                          className={`w-full text-left px-8 py-5 rounded-[2rem] text-[11px] font-black uppercase ${item.color} hover:bg-slate-500/10 transition-all flex items-center gap-4 group ${activeField === item.id ? 'bg-slate-500/5' : ''}`}
                         >
-                          <div className={`w-2.5 h-2.5 rounded-full ${item.color.replace('text', 'bg')} shadow-lg`} /> 
-                          <span>{item.label}</span>
+                          <div className={`w-2.5 h-2.5 rounded-full ${item.dot} shadow-lg shrink-0`} /> 
+                          <span className="truncate">{item.label}</span>
                         </button>
                       ))}
                       <button onClick={() => setClickMenu(null)} className="w-full py-5 text-[10px] font-black uppercase opacity-20 hover:opacity-100 transition-opacity">Abort</button>
