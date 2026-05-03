@@ -281,7 +281,7 @@ class HOSCalculator:
         
         current_date = start_date
         day_num = 1
-        cumulative_miles = 0 # Running total across all days
+        cumulative_miles = 0
         
         while current_date <= end_date:
             day_start = datetime.datetime.combine(current_date, datetime.time.min)
@@ -290,89 +290,84 @@ class HOSCalculator:
             day_segments = []
             total_miles_today = 0
             
-            # Check for initial off-duty if trip starts after midnight
-            first_seg_start = self.timeline[0]['start_time']
-            if day_num == 1 and first_seg_start > day_start:
-                initial_off_hrs = (first_seg_start - day_start).total_seconds() / 3600.0
-                day_segments.append({
-                    "status": "off_duty",
-                    "start_time": "00:00",
-                    "end_time": first_seg_start.strftime("%H:%M"),
-                    "location": self.timeline[0]['location'].split(" -> ")[0],
-                    "duration_hrs": round(initial_off_hrs, 2)
-                })
-
+            # Filter and clamp segments for THIS day only
+            active_segments = []
             for seg in self.timeline:
                 s = max(seg['start_time'], day_start)
                 e = min(seg['end_time'], day_end)
-                
                 if s < e:
                     dur = (e - s).total_seconds() / 3600.0
-                    day_segments.append({
+                    active_segments.append({
                         "status": seg['status'],
+                        "start_dt": s,
+                        "end_dt": e,
                         "start_time": s.strftime("%H:%M"),
-                        "end_time": e.strftime("%H:%M"),
+                        "end_time": e.strftime("%H:%M") if e < day_end else "24:00",
                         "location": seg['location'],
                         "duration_hrs": round(dur, 2)
                     })
                     if seg['status'] == 'driving':
-                        miles = (dur * 60.0) # Using standard 60mph for simplified visual representation in logs
-                        total_miles_today += miles
-                        cumulative_miles += miles # Increment running total
+                        total_miles_today += (dur * 60.0)
 
-            # Fill till midnight of current day if last segment ends before
-            last_seg_end = day_segments[-1]['end_time'] if day_segments else "00:00"
-            if last_seg_end != "00:00": # If it's not exactly midnight
-                last_dt = datetime.datetime.combine(current_date, datetime.datetime.strptime(last_seg_end, "%H:%M").time())
-                if last_dt < day_end:
-                    remaining_hrs = (day_end - last_dt).total_seconds() / 3600.0
-                    day_segments.append({
-                        "status": "off_duty",
-                        "start_time": last_seg_end,
-                        "end_time": "24:00", # Explicitly represent midnight of next day for grid
-                        "location": day_segments[-1]['location'],
-                        "duration_hrs": round(remaining_hrs, 2)
-                    })
-
-            # Totals
-            totals = {"off_duty": 0, "sleeper_berth": 0, "driving": 0, "on_duty_not_driving": 0}
+            # Build a gapless timeline for the day
+            final_day_segments = []
+            cursor = day_start
             
-            # Sum up actual hours from day segments
-            for ds in day_segments:
+            for seg in active_segments:
+                # Add off-duty gap if there's a hole before this segment
+                if seg['start_dt'] > cursor:
+                    gap_dur = (seg['start_dt'] - cursor).total_seconds() / 3600.0
+                    final_day_segments.append({
+                        "status": "off_duty",
+                        "start_time": cursor.strftime("%H:%M"),
+                        "end_time": seg['start_time'],
+                        "location": active_segments[0]['location'].split(" -> ")[0] if active_segments else "Rest",
+                        "duration_hrs": round(gap_dur, 2)
+                    })
+                
+                final_day_segments.append(seg)
+                cursor = seg['end_dt']
+            
+            # Fill remaining time until midnight with off-duty
+            if cursor < day_end:
+                gap_dur = (day_end - cursor).total_seconds() / 3600.0
+                final_day_segments.append({
+                    "status": "off_duty",
+                    "start_time": cursor.strftime("%H:%M"),
+                    "end_time": "24:00",
+                    "location": final_day_segments[-1]['location'] if final_day_segments else "Rest",
+                    "duration_hrs": round(gap_dur, 2)
+                })
+
+            # Calculate precise totals from final segments
+            totals = {"off_duty": 0, "sleeper_berth": 0, "driving": 0, "on_duty_not_driving": 0}
+            for ds in final_day_segments:
                 if ds['status'] in totals:
                     totals[ds['status']] += ds['duration_hrs']
             
-            # Normalize sum to 24.0 due to rounding
+            # Final check to ensure exactly 24.0 (fix floating point drift)
             total_sum = sum(totals.values())
             if abs(total_sum - 24.0) > 0.01:
                 diff = 24.0 - total_sum
-                totals["off_duty"] += diff
+                totals["off_duty"] = round(totals["off_duty"] + diff, 2)
 
-            # Deduplicate Remarks: Merge consecutive identical status/location entries
+            # Deduplicate Remarks
             deduped_remarks = []
-            for ds in day_segments:
+            for ds in final_day_segments:
                 status_label = ds['status'].replace('_', ' ').title()
-                # Clean up location name for remarks (remove activity tags for better legibility)
                 clean_loc = ds['location'].split(' (')[0]
-                
                 new_remark = f"[{ds['start_time']}] {clean_loc} - {status_label}"
-                
-                if not deduped_remarks:
-                    deduped_remarks.append(new_remark)
-                else:
-                    prev_rem = deduped_remarks[-1]
-                    # Simple check: if status and location are the same, skip redundant entry
-                    if f"{clean_loc} - {status_label}" in prev_rem:
-                        continue
+                if not deduped_remarks or f"{clean_loc} - {status_label}" not in deduped_remarks[-1]:
                     deduped_remarks.append(new_remark)
 
+            cumulative_miles += total_miles_today
             logs.append({
                 "date": current_date.strftime("%Y-%m-%d"),
                 "day_number": day_num,
                 "total_miles_today": round(total_miles_today, 1),
                 "total_miles_cumulative": round(cumulative_miles, 1),
-                "segments": day_segments,
-                "total_hours": {k: round(v, 2) for k, v in totals.items()},
+                "segments": final_day_segments,
+                "total_hours": totals,
                 "remarks": deduped_remarks
             })
             
