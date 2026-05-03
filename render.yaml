@@ -11,6 +11,6 @@ services:
       - key: PYTHON_VERSION
         value: "3.13.0"
       - key: ORS_API_KEY
-        generateValue: false # You will fill this in the dashboard
+        value: "paste_your_key_here"
       - key: SECRET_KEY
         generateValue: true
