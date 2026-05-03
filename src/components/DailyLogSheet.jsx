@@ -199,12 +199,26 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
 
           <AnimatePresence>
             {hoveredSegment && (
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                className="absolute top-4 right-32 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl z-20 border border-white/10 min-w-[200px]"
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.9 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                className="absolute z-50 pointer-events-none bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl border border-white/10 min-w-[220px]"
+                style={{ 
+                  left: (timeToX(hoveredSegment.start_time) + timeToX(hoveredSegment.end_time)) / 2,
+                  top: getStatusY(hoveredSegment.status) - 15,
+                  transform: 'translate(-50%, -100%)'
+                }}
               >
-                <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-40">{hoveredSegment.status.replace(/_/g, ' ')}</p>
-                <p className="text-xl font-black text-blue-400 tabular-nums">{hoveredSegment.start_time} — {hoveredSegment.end_time}</p>
-                <p className="text-[10px] mt-3 font-bold italic opacity-60 leading-relaxed border-t border-white/10 pt-2">{hoveredSegment.location}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-40">
+                  {hoveredSegment.status.replace(/_/g, ' ')}
+                </p>
+                <p className="text-xl font-black text-blue-400 tabular-nums">
+                  {hoveredSegment.start_time} — {hoveredSegment.end_time}
+                </p>
+                <p className="text-[10px] mt-3 font-bold italic opacity-60 leading-relaxed border-t border-white/10 pt-2">
+                  {hoveredSegment.location}
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
