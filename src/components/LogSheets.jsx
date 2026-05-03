@@ -77,101 +77,98 @@ const LogSheets = ({ logs, meta }) => {
 
   const springTransition = {
     type: "spring",
-    stiffness: 150,
-    damping: 30,
-    mass: 1
+    stiffness: 200,
+    damping: 25,
   };
 
   return (
     <div ref={containerRef} className="flex flex-col gap-4 relative">
-      {/* Dynamic Shrinking Header - Liquid Motion Version */}
+      {/* Dynamic Header - Zero Glitch Cross-Fade Version */}
       <motion.div 
-        layout
-        transition={springTransition}
-        className={`sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 border-b border-slate-200 dark:border-white/10 shadow-xl overflow-hidden transition-colors duration-700
+        className={`sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 border-b border-slate-200 dark:border-white/10 shadow-xl overflow-hidden transition-colors duration-500
           ${isScrolled ? 'bg-[var(--bg-main)]/95 backdrop-blur-2xl' : 'bg-white dark:bg-slate-900'}`}
-        style={{ height: isScrolled ? 64 : 150 }}
+        animate={{ height: isScrolled ? 64 : 140 }}
+        transition={springTransition}
       >
-        <div className="h-full px-8 flex flex-col justify-center">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <motion.div layout transition={springTransition} className={`bg-blue-600 rounded-lg shadow-lg flex items-center justify-center transition-all duration-700 ${isScrolled ? 'w-8 h-8' : 'w-12 h-12'}`}>
-                <FileText className={`text-white transition-all duration-700 ${isScrolled ? 'w-4 h-4' : 'w-6 h-6'}`} />
-              </motion.div>
-              <div className="flex flex-col">
-                <motion.h2 layout transition={springTransition} className={`font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none transition-all duration-700 ${isScrolled ? 'text-base' : 'text-3xl'}`}>
-                  {isScrolled ? 'Compliance' : 'HOS Compliance Logs'}
-                </motion.h2>
-                <AnimatePresence>
-                  {!isScrolled && (
-                    <motion.p 
-                      initial={{ opacity: 0, height: 0 }} 
-                      animate={{ opacity: 0.3, height: 'auto' }} 
-                      exit={{ opacity: 0, height: 0 }} 
-                      transition={{ duration: 0.5 }}
-                      className="text-[10px] font-black uppercase tracking-[0.2em] mt-1"
+        <div className="relative h-full w-full">
+          {/* COMPACT STATE - Only visible when scrolled */}
+          <AnimatePresence>
+            {isScrolled && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 px-8 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg shadow-lg flex items-center justify-center">
+                    <FileText className="text-white w-4 h-4" />
+                  </div>
+                  <h2 className="font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none text-sm">
+                    Compliance
+                  </h2>
+                </div>
+
+                <div className="flex-grow flex items-center justify-center gap-2 overflow-x-auto no-scrollbar mx-10">
+                  {logs.map((log, idx) => (
+                    <button key={idx} onClick={() => scrollToDay(idx)}
+                      className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                     >
-                      Official Records Repository
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+                      D{idx + 1}
+                    </button>
+                  ))}
+                </div>
 
-            {/* Navigation Pills - Centered in compact mode */}
-            <AnimatePresence mode="wait">
-              {isScrolled && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, x: 20 }} 
-                  animate={{ opacity: 1, scale: 1, x: 0 }} 
-                  exit={{ opacity: 0, scale: 0.9, x: 20 }} 
-                  transition={springTransition}
-                  className="flex-grow flex items-center justify-center gap-2 overflow-x-auto no-scrollbar mx-10"
+                <button onClick={handleExport} disabled={exporting}
+                  className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-1.5 rounded-lg text-[9px] font-black hover:scale-105 transition-all shadow-md disabled:opacity-50"
                 >
-                  {logs.map((log, idx) => {
-                    const hasViolation = log.total_hours?.driving > 11.0;
-                    return (
-                      <button key={idx} onClick={() => scrollToDay(idx)}
-                        className={`relative px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                      >
-                        D{idx + 1}
-                        {hasViolation && <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900" />}
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            <motion.button layout transition={springTransition} onClick={handleExport} disabled={exporting}
-              className={`flex items-center justify-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black hover:scale-105 transition-all shadow-xl disabled:opacity-50 ${isScrolled ? 'px-5 py-2 text-[10px]' : 'px-8 py-3.5 text-xs'}`}
-            >
-              {exporting ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Download size={isScrolled ? 14 : 18} />}
-              <span>{isScrolled ? 'PDF' : 'EXPORT PDF DOCUMENT'}</span>
-            </motion.button>
-          </div>
+                  <Download size={12} /> <span>PDF</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
+          {/* FULL STATE - Only visible when at top */}
           <AnimatePresence>
             {!isScrolled && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, y: 10 }} 
-                transition={{ duration: 0.4 }}
-                className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mt-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 px-10 flex flex-col justify-center"
               >
-                {logs.map((log, idx) => {
-                  const date = new Date(log.date.replace(/-/g, '/'));
-                  const hasViolation = log.total_hours?.driving > 11.0;
-                  return (
-                    <button key={idx} onClick={() => scrollToDay(idx)}
-                      className={`relative px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                    >
-                      Day {idx + 1} — {date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                      {hasViolation && <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm" />}
-                    </button>
-                  );
-                })}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-600 rounded-xl shadow-xl flex items-center justify-center">
+                      <FileText className="text-white w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none">
+                        HOS Compliance Logs
+                      </h2>
+                      <p className="text-[10px] font-black opacity-30 uppercase tracking-[0.2em] mt-1">Official Records Repository</p>
+                    </div>
+                  </div>
+                  
+                  <button onClick={handleExport} disabled={exporting}
+                    className="flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-3.5 rounded-xl text-xs font-black hover:scale-105 transition-all shadow-xl disabled:opacity-50"
+                  >
+                    <Download size={16} /> <span>EXPORT PDF DOCUMENT</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  {logs.map((log, idx) => {
+                    const date = new Date(log.date.replace(/-/g, '/'));
+                    return (
+                      <button key={idx} onClick={() => scrollToDay(idx)}
+                        className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                      >
+                        Day {idx + 1} — {date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                      </button>
+                    );
+                  })}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
