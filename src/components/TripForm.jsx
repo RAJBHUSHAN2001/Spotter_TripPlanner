@@ -36,7 +36,7 @@ const InputGroup = ({ label, name, icon: Icon, fieldId, type = "text", placehold
 );
 
 const SectionHeader = ({ icon: Icon, title, id, isCollapsed, onToggle }) => (
-  <button 
+  <button
     type="button"
     onClick={() => onToggle(id)}
     className="w-full flex items-center gap-3 mb-4 group cursor-pointer"
@@ -125,12 +125,12 @@ const TripForm = ({ onPlanTrip, loading, formData, errors, onChange, onReset, ac
       <div className="flex gap-4 pt-4">
         <button
           type="button"
-          onClick={onReset}
+          onClick={handleReset}
           className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-red-500 transition-all border border-black/5 dark:border-white/5"
         >
           <RotateCcw size={16} />
         </button>
-        
+
         <button
           id="main-submit-btn"
           disabled={loading}

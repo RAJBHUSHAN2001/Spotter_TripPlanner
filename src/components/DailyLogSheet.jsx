@@ -103,11 +103,19 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
         {/* 24-Hour Grid */}
         <div className="relative overflow-x-auto custom-scrollbar pb-12 bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-sm border border-slate-200 dark:border-white/10">
           <svg width={X_OFFSET + (24 * HOUR_WIDTH) + 120} height={230} className="overflow-visible">
-            {/* Grid Row Backgrounds */}
+            {/* Grid Row Backgrounds - Fixed neutral color to prevent "ghost" segments */}
             {ROWS.map((row, i) => (
               <React.Fragment key={row.id}>
-                <line x1={X_OFFSET} y1={getStatusY(row.id)} x2={X_OFFSET + 24 * HOUR_WIDTH} y2={getStatusY(row.id)} stroke="currentColor" opacity="0.1" strokeWidth="0.5" />
-                <text x={X_OFFSET - 20} y={getStatusY(row.id) + 4} textAnchor="end" className="text-[11px] font-black opacity-40 uppercase tracking-tighter">
+                <line 
+                  x1={X_OFFSET} 
+                  y1={getStatusY(row.id)} 
+                  x2={X_OFFSET + 24 * HOUR_WIDTH} 
+                  y2={getStatusY(row.id)} 
+                  stroke="#e2e8f0" 
+                  strokeWidth="1" 
+                  strokeDasharray="2,2"
+                />
+                <text x={X_OFFSET - 20} y={getStatusY(row.id) + 4} textAnchor="end" className="text-[11px] font-black opacity-40 uppercase tracking-tighter fill-slate-500">
                   {row.label}
                 </text>
               </React.Fragment>
@@ -122,13 +130,13 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
                 <React.Fragment key={i}>
                   <line 
                     x1={x} y1={10} x2={x} y2={180} 
-                    stroke="currentColor" 
-                    opacity={isMajor ? 0.5 : isTwoHour ? 0.2 : 0.05} 
+                    stroke="#e2e8f0" 
+                    opacity={isMajor ? 1 : 0.5} 
                     strokeDasharray={isMajor ? "0" : "3,3"}
                     strokeWidth={isMajor ? 1 : 0.5}
                   />
                   {isTwoHour && (
-                    <text x={x} y={205} textAnchor="middle" className={`text-[10px] font-black opacity-40 ${isMajor ? 'opacity-100 font-black scale-110 fill-slate-900 dark:fill-white' : ''}`}>
+                    <text x={x} y={205} textAnchor="middle" className={`text-[10px] font-black fill-slate-400 ${isMajor ? 'fill-slate-900 dark:fill-white scale-110' : ''}`}>
                       {i === 0 ? 'MID' : i === 12 ? 'NOON' : i === 24 ? 'MID' : i}
                     </text>
                   )}
@@ -137,18 +145,18 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
             })}
 
             {/* Total Hrs Summary Column */}
-            <rect x={X_OFFSET + 24 * HOUR_WIDTH + 20} y={10} width="90" height="175" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.1" />
-            <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={-5} textAnchor="middle" className="text-[9px] font-black opacity-40 uppercase tracking-widest">Total Hrs</text>
+            <rect x={X_OFFSET + 24 * HOUR_WIDTH + 20} y={10} width="90" height="175" fill="none" stroke="#e2e8f0" strokeWidth="2" />
+            <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={-5} textAnchor="middle" className="text-[9px] font-black opacity-40 uppercase tracking-widest fill-slate-500">Total Hrs</text>
             
             {ROWS.map((row, i) => (
               <React.Fragment key={`total-${row.id}`}>
-                <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={getStatusY(row.id) - 12} textAnchor="middle" className="text-[7px] font-black opacity-30 uppercase tracking-widest">
+                <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={getStatusY(row.id) - 12} textAnchor="middle" className="text-[7px] font-black opacity-30 uppercase tracking-widest fill-slate-500">
                   {row.label}
                 </text>
-                <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={getStatusY(row.id) + 6} textAnchor="middle" className="text-base font-black italic">
+                <text x={X_OFFSET + 24 * HOUR_WIDTH + 65} y={getStatusY(row.id) + 6} textAnchor="middle" className="text-base font-black italic fill-slate-900 dark:fill-white">
                   {parseFloat(log.total_hours?.[row.id] || 0).toFixed(1)}
                 </text>
-                <line x1={X_OFFSET + 24 * HOUR_WIDTH + 30} y1={getStatusY(row.id) + 20} x2={X_OFFSET + 24 * HOUR_WIDTH + 100} y2={getStatusY(row.id) + 20} stroke="currentColor" opacity="0.1" />
+                <line x1={X_OFFSET + 24 * HOUR_WIDTH + 30} y1={getStatusY(row.id) + 20} x2={X_OFFSET + 24 * HOUR_WIDTH + 100} y2={getStatusY(row.id) + 20} stroke="#e2e8f0" />
               </React.Fragment>
             ))}
 
@@ -160,6 +168,10 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
             {log.segments.map((seg, i) => {
               const startX = timeToX(seg.start_time);
               const endX = timeToX(seg.end_time);
+              
+              // Skip rendering segments with zero or negative width to prevent visual artifacts
+              if (endX <= startX) return null;
+              
               const y = getStatusY(seg.status);
               const rowColor = ROWS.find(r => r.id === seg.status)?.color;
 
@@ -167,7 +179,9 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
                 <React.Fragment key={i}>
                   <line 
                     x1={startX} y1={y} x2={endX} y2={y} 
-                    stroke={rowColor} strokeWidth="8" strokeLinecap="round"
+                    stroke={rowColor} 
+                    strokeWidth="8" 
+                    strokeLinecap="round"
                     className="cursor-pointer transition-all hover:stroke-blue-400"
                     onMouseEnter={() => setHoveredSegment(seg)}
                     onMouseLeave={() => setHoveredSegment(null)}
@@ -175,7 +189,7 @@ const DailyLogSheet = ({ log, meta = {}, dayNumber, totalDays }) => {
                   {i < log.segments.length - 1 && (
                     <line 
                       x1={endX} y1={y} x2={endX} y2={getStatusY(log.segments[i+1].status)} 
-                      stroke={rowColor} strokeWidth="1" opacity="0.2" 
+                      stroke={rowColor} strokeWidth="1" opacity="0.3" 
                     />
                   )}
                 </React.Fragment>
