@@ -77,87 +77,80 @@ const LogSheets = ({ logs, meta }) => {
 
   return (
     <div ref={containerRef} className="flex flex-col gap-4 relative">
-      {/* Dynamic Shrinking Header - Professional Tactical Version */}
-      <div 
-        className={`sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 transition-all duration-500 ease-in-out border-b border-slate-200 dark:border-white/10 shadow-xl
-          ${isScrolled 
-            ? 'bg-[var(--bg-main)]/95 backdrop-blur-2xl py-2 px-8' 
-            : 'bg-white dark:bg-slate-900 py-6 px-10'
-          }`}
+      {/* Dynamic Shrinking Header - Liquid Motion Version */}
+      <motion.div 
+        layout
+        className={`sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 border-b border-slate-200 dark:border-white/10 shadow-xl overflow-hidden transition-colors duration-500
+          ${isScrolled ? 'bg-[var(--bg-main)]/95 backdrop-blur-2xl' : 'bg-white dark:bg-slate-900'}`}
+        style={{ height: isScrolled ? 60 : 140 }}
       >
-        <div className={`flex items-center gap-6 transition-all ${isScrolled ? 'flex-row' : 'flex-col items-stretch'}`}>
-          <div className="flex items-center justify-between flex-grow">
+        <div className="h-full px-8 flex flex-col justify-center">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`bg-blue-600 rounded-lg shadow-lg transition-all ${isScrolled ? 'p-1.5' : 'p-2.5'}`}>
+              <motion.div layout className={`bg-blue-600 rounded-lg shadow-lg flex items-center justify-center ${isScrolled ? 'w-7 h-7' : 'w-10 h-10'}`}>
                 <FileText className={`text-white transition-all ${isScrolled ? 'w-3.5 h-3.5' : 'w-5 h-5'}`} />
-              </div>
-              <div className="transition-all">
-                <h2 className={`font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none transition-all ${isScrolled ? 'text-sm' : 'text-2xl'}`}>
+              </motion.div>
+              <div className="flex flex-col">
+                <motion.h2 layout className={`font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none ${isScrolled ? 'text-sm' : 'text-2xl'}`}>
                   {isScrolled ? 'Compliance' : 'HOS Compliance Logs'}
-                </h2>
-                {!isScrolled && (
-                  <p className="text-[10px] font-black opacity-30 uppercase tracking-[0.2em] mt-1">Official Records Repository</p>
-                )}
+                </motion.h2>
+                <AnimatePresence>
+                  {!isScrolled && (
+                    <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 0.3, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-[10px] font-black uppercase tracking-[0.2em] mt-1">
+                      Official Records Repository
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
-            {/* In compact mode, we place navigation here if screen is wide enough, otherwise it's below in full mode */}
-            {isScrolled && (
-              <div className="flex-grow flex items-center justify-center gap-2 overflow-x-auto no-scrollbar mx-8">
+            {/* Navigation Pills - Centered in compact mode */}
+            <AnimatePresence>
+              {isScrolled && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex-grow flex items-center justify-center gap-2 overflow-x-auto no-scrollbar mx-10">
+                  {logs.map((log, idx) => {
+                    const hasViolation = log.total_hours?.driving > 11.0;
+                    return (
+                      <button key={idx} onClick={() => scrollToDay(idx)}
+                        className={`relative px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                      >
+                        D{idx + 1}
+                        {hasViolation && <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white dark:border-slate-900" />}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <motion.button layout onClick={handleExport} disabled={exporting}
+              className={`flex items-center justify-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black hover:scale-105 transition-all shadow-xl disabled:opacity-50 ${isScrolled ? 'px-4 py-1.5 text-[9px]' : 'px-6 py-3 text-xs'}`}
+            >
+              {exporting ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Download size={isScrolled ? 12 : 16} />}
+              <span>{isScrolled ? 'PDF' : 'EXPORT PDF DOCUMENT'}</span>
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+            {!isScrolled && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mt-4">
                 {logs.map((log, idx) => {
+                  const date = new Date(log.date.replace(/-/g, '/'));
                   const hasViolation = log.total_hours?.driving > 11.0;
                   return (
-                    <button
-                      key={idx}
-                      onClick={() => scrollToDay(idx)}
-                      className={`relative px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                    <button key={idx} onClick={() => scrollToDay(idx)}
+                      className={`relative px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                     >
-                      D{idx + 1}
-                      {hasViolation && (
-                        <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white dark:border-slate-900" />
-                      )}
+                      Day {idx + 1} — {date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                      {hasViolation && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm" />}
                     </button>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
-            
-            <button 
-              onClick={handleExport}
-              disabled={exporting}
-              className={`flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black hover:scale-105 transition-all shadow-xl disabled:opacity-50 ${isScrolled ? 'px-3 py-1.5 text-[9px]' : 'px-6 py-3 text-xs'}`}
-            >
-              {exporting ? (
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Download size={isScrolled ? 12 : 16} />
-              )}
-              <span>{isScrolled ? 'PDF' : 'EXPORT PDF DOCUMENT'}</span>
-            </button>
-          </div>
-
-          {!isScrolled && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar mt-2">
-              {logs.map((log, idx) => {
-                const date = new Date(log.date.replace(/-/g, '/'));
-                const hasViolation = log.total_hours?.driving > 11.0;
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => scrollToDay(idx)}
-                    className={`relative px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                  >
-                    Day {idx + 1} — {date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                    {hasViolation && (
-                      <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
       <div className="space-y-24 pb-12 pt-4">
         {logs.map((log, idx) => (
