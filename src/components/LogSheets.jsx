@@ -7,8 +7,22 @@ import { FileText, Download, Map as MapIcon, Compass, AlertTriangle, CheckCircle
 const LogSheets = ({ logs, meta }) => {
   const [activeDay, setActiveDay] = useState(0);
   const scrollRefs = useRef([]);
+  const containerRef = useRef(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = (e) => {
+      setIsScrolled(e.target.scrollTop > 50);
+    };
+
+    const container = containerRef.current?.parentElement;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -62,26 +76,46 @@ const LogSheets = ({ logs, meta }) => {
   }
 
   return (
-    <div className="flex flex-col gap-4 relative">
-      {/* Ultra-Thin Tactical Header - Single Row Layout */}
-      <div className="sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 bg-[var(--bg-main)]/95 backdrop-blur-2xl border-b border-slate-200 dark:border-white/10 px-8 py-2.5 shadow-lg">
-        <div className="flex items-center gap-6">
-          {/* Title Section */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="p-1.5 bg-blue-600 rounded-lg shadow-md">
-              <FileText className="text-white w-3.5 h-3.5" />
+    <div ref={containerRef} className="flex flex-col gap-4 relative">
+      {/* Dynamic Shrinking Header */}
+      <div 
+        className={`sticky -top-8 md:-top-8 lg:-top-12 z-[2000] -mx-8 md:-mx-8 lg:-mx-12 transition-all duration-300 ease-in-out border-b border-slate-200 dark:border-white/10 shadow-lg
+          ${isScrolled 
+            ? 'bg-[var(--bg-main)]/95 backdrop-blur-2xl py-2.5 px-8' 
+            : 'bg-white dark:bg-slate-900 py-6 px-10'
+          }`}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`bg-blue-600 rounded-lg shadow-lg transition-all ${isScrolled ? 'p-1.5' : 'p-2.5'}`}>
+                <FileText className={`text-white transition-all ${isScrolled ? 'w-4 h-4' : 'w-5 h-5'}`} />
+              </div>
+              <div className="transition-all">
+                <h2 className={`font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none transition-all ${isScrolled ? 'text-base' : 'text-2xl'}`}>
+                  {isScrolled ? 'HOS Compliance' : 'HOS Compliance Logs'}
+                </h2>
+                {!isScrolled && (
+                  <p className="text-[10px] font-black opacity-30 uppercase tracking-[0.2em] mt-1">Official Records Repository</p>
+                )}
+              </div>
             </div>
-            <div className="hidden lg:block">
-              <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 dark:text-white leading-none">
-                HOS Compliance
-              </h2>
-            </div>
+            
+            <button 
+              onClick={handleExport}
+              disabled={exporting}
+              className={`flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black hover:scale-105 transition-all shadow-xl disabled:opacity-50 ${isScrolled ? 'px-4 py-2 text-[10px]' : 'px-6 py-3 text-xs'}`}
+            >
+              {exporting ? (
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download size={isScrolled ? 14 : 16} />
+              )}
+              <span>{isScrolled ? 'EXPORT' : 'EXPORT PDF DOCUMENT'}</span>
+            </button>
           </div>
 
-          <div className="h-6 w-px bg-slate-500/10 hidden lg:block" />
-
-          {/* Navigation Pills - Now in the center/main area */}
-          <div className="flex-grow flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <div className={`flex items-center gap-2 overflow-x-auto no-scrollbar transition-all ${isScrolled ? 'mt-0 opacity-100' : 'mt-2'}`}>
             {logs.map((log, idx) => {
               const date = new Date(log.date.replace(/-/g, '/'));
               const hasViolation = log.total_hours?.driving > 11.0;
@@ -89,32 +123,16 @@ const LogSheets = ({ logs, meta }) => {
                 <button
                   key={idx}
                   onClick={() => scrollToDay(idx)}
-                  className={`relative px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                  className={`relative rounded-full font-black uppercase tracking-widest transition-all border whitespace-nowrap ${isScrolled ? 'px-4 py-1.5 text-[9px]' : 'px-5 py-2.5 text-[10px]'} ${activeDay === idx ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                 >
-                  Day {idx + 1}
+                  Day {idx + 1} {!isScrolled && `— ${date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}`}
                   {hasViolation && (
-                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-white dark:border-slate-900" />
+                    <div className={`absolute -top-1 -right-1 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm ${isScrolled ? 'w-2 h-2' : 'w-2.5 h-2.5'}`} />
                   )}
                 </button>
               );
             })}
           </div>
-
-          <div className="h-6 w-px bg-slate-500/10" />
-          
-          {/* Compact Export Button */}
-          <button 
-            onClick={handleExport}
-            disabled={exporting}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-[9px] font-black hover:scale-105 transition-all shadow-md disabled:opacity-50 shrink-0"
-          >
-            {exporting ? (
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Download size={11} />
-            )}
-            <span className="hidden sm:inline">EXPORT PDF</span>
-          </button>
         </div>
       </div>
 
