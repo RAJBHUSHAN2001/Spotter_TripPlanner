@@ -125,7 +125,7 @@ const TripForm = ({ onPlanTrip, loading, formData, errors, onChange, onReset, ac
       <div className="flex gap-4 pt-4">
         <button
           type="button"
-          onClick={handleReset}
+          onClick={onReset}
           className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-red-500 transition-all border border-black/5 dark:border-white/5"
         >
           <RotateCcw size={16} />
