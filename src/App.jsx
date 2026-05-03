@@ -274,10 +274,21 @@ function App() {
                           onClick={async () => {
                             const { lat, lng } = clickMenu;
                             setClickMenu(null);
-                            const address = await reverseGeocode(lat, lng);
-                            setMapClickData({ lat, lng, address: address || `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
-                            setActiveField(item.id);
+                            
+                            // Immediately set the coordinates as a placeholder while geocoding
+                            const coordsStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
                             setDraftMarkers(prev => ({ ...prev, [item.id]: { lat, lng } }));
+                            setMapClickData({ lat, lng, address: coordsStr });
+                            setActiveField(item.id);
+
+                            try {
+                              const address = await reverseGeocode(lat, lng);
+                              if (address) {
+                                setMapClickData({ lat, lng, address });
+                              }
+                            } catch (err) {
+                              console.error("Geocoding failed, keeping coordinates.");
+                            }
                           }}
                           className={`w-full text-left px-8 py-5 rounded-[2rem] text-[11px] font-black uppercase ${item.color} hover:bg-slate-500/10 transition-all flex items-center gap-4 group`}
                         >
