@@ -29,39 +29,95 @@ function App() {
   const [activeField, setActiveField] = useState('currentLocation');
   const [draftMarkers, setDraftMarkers] = useState({});
   const [clickMenu, setClickMenu] = useState(null);
-  const [prefillTrip, setPrefillTrip] = useState(null);
+
+  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
+    currentLocation: '',
+    pickupLocation: '',
+    dropoffLocation: '',
+    cycleUsed: '0',
+    driverName: '',
+    coDriverName: '',
+    vehicleId: '',
+    trailerId: '',
+    licensePlate: '',
+    licenseState: '',
+    carrierName: '',
+    officeAddress: '',
+    homeTerminal: '',
+    manifestNo: ''
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const handlePlanTrip = async (formData) => {
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    const required = {
+      driverName: 'Primary Driver required',
+      vehicleId: 'Vehicle ID required',
+      currentLocation: 'Origin Vector required',
+      dropoffLocation: 'Destination required',
+      homeTerminal: 'Home Terminal required'
+    };
+    
+    Object.entries(required).forEach(([field, msg]) => {
+      if (!formData[field] || formData[field].trim() === '') {
+        newErrors[field] = msg;
+      }
+    });
+
+    const cycle = parseFloat(formData.cycleUsed);
+    if (isNaN(cycle) || cycle < 0 || cycle > 70) {
+      newErrors.cycleUsed = 'Must be 0-70 hours';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const resetForm = () => {
+    setFormData({
+      currentLocation: '', pickupLocation: '', dropoffLocation: '', cycleUsed: '0',
+      driverName: '', coDriverName: '', vehicleId: '', trailerId: '',
+      licensePlate: '', licenseState: '', carrierName: '', officeAddress: '',
+      homeTerminal: '', manifestNo: ''
+    });
+    setErrors({});
+    setActiveField('currentLocation');
+    setDraftMarkers({});
+    setTripData(null);
+  };
+
+  const handlePlanTrip = async () => {
+    if (!validateForm()) return;
+    
     setLoading(true);
     setLoadingStep(0);
     setError(null);
     
-    // Simulate tactical progress for better UX as requested
     const interval = setInterval(() => {
       setLoadingStep(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
     }, 600);
 
     const submissionData = { ...formData };
+    // Enrich with exact addresses from reverse geocoding if available
     for (const field of Object.keys(draftMarkers)) {
-      const pos = draftMarkers[field];
-      if (pos && pos.lat && pos.lng) {
-        try {
-          const address = await reverseGeocode(pos.lat, pos.lng);
-          submissionData[field] = address || `${pos.lat}, ${pos.lng}`;
-        } catch (error) {
-          submissionData[field] = `${pos.lat}, ${pos.lng}`;
-        }
+      if (draftMarkers[field]?.address) {
+        submissionData[field] = draftMarkers[field].address;
       }
     }
 
     try {
       const data = await planTrip(submissionData);
-      // Ensure the loading animation finishes
       await new Promise(r => setTimeout(r, 1000));
       setTripData(data);
       setActiveTab('map');
@@ -89,20 +145,18 @@ function App() {
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   const clearWorkspace = () => {
-    setTripData(null);
-    setDraftMarkers({});
+    resetForm();
     setActiveTab('map');
-    setPrefillTrip(null);
   };
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col bg-[var(--bg-main)]">
       {/* Brand Header */}
-      <header className="h-16 md:h-20 shrink-0 flex items-center justify-between px-4 md:px-10 z-50 border-b border-black/5 dark:border-white/5 bg-[var(--bg-main)]/80 backdrop-blur-xl">
+      <header className="h-16 md:h-20 shrink-0 flex items-center justify-between px-4 md:px-10 relative z-[6000] border-b border-black/5 dark:border-white/5 bg-[var(--bg-main)]/80 backdrop-blur-xl">
         <div className="flex items-center gap-3 md:gap-10 min-w-0">
           <div className="flex items-center gap-4 group cursor-default">
             <div className="logo-box">
-              <Command className="w-5 h-5 text-white relative z-10" />
+              <Command className="w-5 h-5 text-white dark:text-slate-900 relative z-10" />
             </div>
             <div className="hidden md:block">
               <h1 className="text-xl lg:text-2xl text-brand leading-none font-black italic">
@@ -149,10 +203,12 @@ function App() {
             <TripForm 
               onPlanTrip={handlePlanTrip} 
               loading={loading} 
-              mapClickData={mapClickData} 
+              formData={formData}
+              errors={errors}
+              onChange={handleFormChange}
+              onReset={resetForm}
               activeField={activeField}
               setActiveField={setActiveField}
-              prefillTrip={prefillTrip}
             />
 
             <AnimatePresence>
@@ -181,7 +237,8 @@ function App() {
                   <div 
                     key={trip.id} 
                     onClick={() => {
-                      setPrefillTrip(trip.formData);
+                      setFormData(prev => ({ ...prev, ...trip.formData }));
+                      setErrors({});
                       setActiveTab('map');
                     }}
                     className="p-5 rounded-[1.5rem] bg-white dark:bg-slate-800/40 border border-black/5 dark:border-white/5 hover:border-blue-500/30 transition-all cursor-pointer group flex items-center justify-between"
@@ -273,24 +330,25 @@ function App() {
                           key={item.id}
                           onClick={async () => {
                             const { lat, lng } = clickMenu;
+                            const fieldId = item.id;
                             setClickMenu(null);
                             
                             const coordsStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-                            setDraftMarkers(prev => ({ ...prev, [item.id]: { lat, lng } }));
-                            setMapClickData({ lat, lng, address: coordsStr });
-                            setActiveField(item.id);
+                            setDraftMarkers(prev => ({ ...prev, [fieldId]: { lat, lng } }));
+                            setFormData(prev => ({ ...prev, [fieldId]: coordsStr }));
+                            setErrors(prev => ({ ...prev, [fieldId]: null }));
+                            setActiveField(fieldId);
 
-                            try {
-                              const address = await reverseGeocode(lat, lng);
-                              if (address) {
-                                setMapClickData({ lat, lng, address });
-                                // Force update the form data for the active field
-                                setFormData(prev => ({ ...prev, [item.id]: address }));
-                              }
-                            } catch (err) {
-                              console.error("Geocoding failed, keeping coordinates.");
-                            }
-                          }}
+                             try {
+                               const address = await reverseGeocode(lat, lng);
+                               if (address) {
+                                 setFormData(prev => ({ ...prev, [fieldId]: address }));
+                                 setDraftMarkers(prev => ({ ...prev, [fieldId]: { lat, lng, address } }));
+                               }
+                             } catch (err) {
+                               console.error("Geocoding failed, keeping coordinates.");
+                             }
+                           }}
                           className={`w-full text-left px-8 py-5 rounded-[2rem] text-[11px] font-black uppercase ${item.color} hover:bg-slate-500/10 transition-all flex items-center gap-4 group ${activeField === item.id ? 'bg-slate-500/5' : ''}`}
                         >
                           <div className={`w-2.5 h-2.5 rounded-full ${item.dot} shadow-lg shrink-0`} /> 

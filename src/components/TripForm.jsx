@@ -50,28 +50,10 @@ const SectionHeader = ({ icon: Icon, title, id, isCollapsed, onToggle }) => (
   </button>
 );
 
-const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveField, prefillTrip }) => {
+const TripForm = ({ onPlanTrip, loading, formData, errors, onChange, onReset, activeField, setActiveField }) => {
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     return saved ? JSON.parse(saved) : { identification: false, vectors: false, parameters: false };
-  });
-
-  const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({
-    currentLocation: '',
-    pickupLocation: '',
-    dropoffLocation: '',
-    cycleUsed: '0',
-    driverName: '',
-    coDriverName: '',
-    vehicleId: '',
-    trailerId: '',
-    licensePlate: '',
-    licenseState: '',
-    carrierName: '',
-    officeAddress: '',
-    homeTerminal: '',
-    manifestNo: ''
   });
 
   useEffect(() => {
@@ -80,76 +62,17 @@ const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveFie
 
   const toggleSection = (id) => setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
 
-  useEffect(() => {
-    if (mapClickData && activeField) {
-      const displayValue = mapClickData.address || `${mapClickData.lat.toFixed(5)}, ${mapClickData.lng.toFixed(5)}`;
-      setFormData(prev => ({ ...prev, [activeField]: displayValue }));
-      setErrors(prev => ({ ...prev, [activeField]: null }));
-    }
-  }, [mapClickData]);
-
-  useEffect(() => {
-    if (prefillTrip) {
-      setFormData(prev => ({ ...prev, ...prefillTrip }));
-      setErrors({});
-    }
-  }, [prefillTrip]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    const required = {
-      driverName: 'Primary Driver required',
-      vehicleId: 'Vehicle ID required',
-      currentLocation: 'Origin Vector required',
-      dropoffLocation: 'Destination required',
-      homeTerminal: 'Home Terminal required'
-    };
-    
-    Object.entries(required).forEach(([field, msg]) => {
-      if (!formData[field] || formData[field].trim() === '') {
-        newErrors[field] = msg;
-      }
-    });
-
-    const cycle = parseFloat(formData.cycleUsed);
-    if (isNaN(cycle) || cycle < 0 || cycle > 70) {
-      newErrors.cycleUsed = 'Must be 0-70 hours';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleReset = () => {
-    setFormData({
-      currentLocation: '', pickupLocation: '', dropoffLocation: '', cycleUsed: '0',
-      driverName: '', coDriverName: '', vehicleId: '', trailerId: '',
-      licensePlate: '', licenseState: '', carrierName: '', officeAddress: '',
-      homeTerminal: '', manifestNo: ''
-    });
-    setErrors({});
-    setActiveField('currentLocation');
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (validate()) {
-      onPlanTrip(formData);
-    }
+    onPlanTrip();
   };
 
   const commonProps = (name) => ({
     name,
-    value: formData[name],
-    onChange: handleChange,
+    value: formData[name] || '',
+    onChange,
     onFocus: setActiveField,
-    activeField: activeField,
+    activeField,
     error: errors[name]
   });
 
@@ -202,7 +125,7 @@ const TripForm = ({ onPlanTrip, loading, mapClickData, activeField, setActiveFie
       <div className="flex gap-4 pt-4">
         <button
           type="button"
-          onClick={handleReset}
+          onClick={onReset}
           className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-red-500 transition-all border border-black/5 dark:border-white/5"
         >
           <RotateCcw size={16} />

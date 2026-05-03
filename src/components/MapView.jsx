@@ -157,7 +157,7 @@ const MapView = ({ route, theme, onMapClick, draftMarkers = {} }) => {
         >
           <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={true} className="custom-tooltip">
             <div className="px-3 py-1.5 bg-blue-600 text-white rounded-full shadow-lg">
-              <p className="text-[8px] font-black uppercase tracking-widest">{typeMap[field]}</p>
+              <p className="text-[8px] font-black uppercase tracking-widest">{pos.address || typeMap[field]}</p>
             </div>
           </Tooltip>
         </Marker>
