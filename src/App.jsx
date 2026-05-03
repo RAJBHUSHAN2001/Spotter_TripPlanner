@@ -284,6 +284,8 @@ function App() {
                               const address = await reverseGeocode(lat, lng);
                               if (address) {
                                 setMapClickData({ lat, lng, address });
+                                // Force update the form data for the active field
+                                setFormData(prev => ({ ...prev, [item.id]: address }));
                               }
                             } catch (err) {
                               console.error("Geocoding failed, keeping coordinates.");

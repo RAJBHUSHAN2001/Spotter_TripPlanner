@@ -148,13 +148,35 @@ def get_point_at_distance(polyline, target_distance_miles):
 
 def reverse_geocode(lat, lng):
     """
-    Converts [lat, lng] to a city/state string using Nominatim.
+    Converts [lat, lng] to a city/state string using ORS or Nominatim.
     """
     cache_key = f"rev_geo_{lat:.4f}_{lng:.4f}"
     cached = cache.get(cache_key)
     if cached:
         return cached
 
+    # Try 1: OpenRouteService Reverse Geocoding
+    api_key = getattr(settings, 'OPENROUTESERVICE_API_KEY', '')
+    if api_key and api_key != 'your_openrouteservice_api_key_here':
+        try:
+            resp = requests.get(
+                "https://api.openrouteservice.org/geocode/reverse", 
+                params={"api_key": api_key, "point.lat": lat, "point.lon": lng, "size": 1},
+                timeout=5
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('features'):
+                    props = data['features'][0]['properties']
+                    city = props.get('locality') or props.get('county') or props.get('region', 'Unknown')
+                    state = props.get('region_a', '') or props.get('region', '')
+                    res = f"{city}, {state}".strip(", ")
+                    cache.set(cache_key, res, 86400)
+                    return res
+        except Exception as e:
+            print(f"DEBUG: ORS Reverse Geocode failed: {e}")
+
+    # Try 2: Fallback to Nominatim
     headers = {"User-Agent": "ELDPlanner/1.0"}
     try:
         resp = requests.get(
